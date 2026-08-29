@@ -1,2 +1,5 @@
 ﻿<Solution>
+  <Project Path="GardenGambit.Tests.EditMode.csproj" />
+  <Project Path="GardenGambit.Simulation.csproj" />
+  <Project Path="GardenGambit.Domain.csproj" />
 </Solution>

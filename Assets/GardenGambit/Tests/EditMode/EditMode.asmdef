@@ -1,0 +1,25 @@
+{
+    "name": "GardenGambit.Tests.EditMode",
+    "rootNamespace": "GardenGambit.Tests.EditMode",
+    "references": [
+        "GUID:27619889b8ba8c24980f49ee34dbb44a",
+        "GUID:0acc523941302664db1f4e527237feb3",
+        "GUID:455ba671305e3a6468f710a2a555d64a",
+        "GUID:fd8bac6d1b813bb489b07832652bb9be"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
