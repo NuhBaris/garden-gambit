@@ -39,7 +39,15 @@ namespace GardenGambit.Domain.Combat
             if (enhanceKind !=
                     CombatSlotEnhanceKind.None &&
                 enhanceKind !=
-                    CombatSlotEnhanceKind.ProtectiveSeal)
+                    CombatSlotEnhanceKind
+                        .ProtectiveSeal &&
+                enhanceKind !=
+                    CombatSlotEnhanceKind.WarBanner &&
+                enhanceKind !=
+                    CombatSlotEnhanceKind
+                        .SacrificialAltar &&
+                enhanceKind !=
+                    CombatSlotEnhanceKind.WarAltar)
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(enhanceKind),
@@ -79,6 +87,19 @@ namespace GardenGambit.Domain.Combat
         public bool HasProtectiveSeal =>
             EnhanceKind ==
             CombatSlotEnhanceKind.ProtectiveSeal;
+
+        public bool HasWarBanner =>
+            EnhanceKind ==
+            CombatSlotEnhanceKind.WarBanner;
+
+        public bool HasSacrificialAltar =>
+            EnhanceKind ==
+            CombatSlotEnhanceKind
+                .SacrificialAltar;
+
+        public bool HasWarAltar =>
+            EnhanceKind ==
+            CombatSlotEnhanceKind.WarAltar;
 
         internal void SetOccupant(
             InstanceId occupantInstanceId)

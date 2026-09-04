@@ -20,6 +20,9 @@ namespace GardenGambit.Simulation.Combat
         private ColumnStartedCombatEvent
             _activeColumnEvent;
 
+        private bool
+            _activeColumnUsesStagedNormalAttack;
+
         public CombatColumnRunner(
             CombatState state,
             CombatEventMetadataFactory metadataFactory,
@@ -57,8 +60,11 @@ namespace GardenGambit.Simulation.Combat
                     nameof(sourceRegistry));
             }
 
-            _state = state;
-            _eventLog = eventLog;
+            _state =
+                state;
+
+            _eventLog =
+                eventLog;
 
             _columnStartResolver =
                 new CombatColumnStartResolver(
@@ -74,6 +80,110 @@ namespace GardenGambit.Simulation.Combat
                     sourceRegistry);
         }
 
+        public CombatColumnRunner(
+            CombatState state,
+            CombatEventMetadataFactory metadataFactory,
+            CombatEventLog eventLog,
+            CombatEventResolutionEngine
+                eventResolutionEngine)
+            : this(
+                state,
+                metadataFactory,
+                eventLog,
+                eventResolutionEngine,
+                new
+                    CombatNormalAttackSourceDamageModifierRegistry(),
+                CreateDefaultTargetReductionResolver())
+        {
+        }
+
+        public CombatColumnRunner(
+            CombatState state,
+            CombatEventMetadataFactory metadataFactory,
+            CombatEventLog eventLog,
+            CombatEventResolutionEngine
+                eventResolutionEngine,
+            CombatNormalAttackSourceDamageModifierRegistry
+                sourceDamageModifierRegistry)
+            : this(
+                state,
+                metadataFactory,
+                eventLog,
+                eventResolutionEngine,
+                sourceDamageModifierRegistry,
+                CreateDefaultTargetReductionResolver())
+        {
+        }
+
+        public CombatColumnRunner(
+            CombatState state,
+            CombatEventMetadataFactory metadataFactory,
+            CombatEventLog eventLog,
+            CombatEventResolutionEngine
+                eventResolutionEngine,
+            CombatNormalAttackSourceDamageModifierRegistry
+                sourceDamageModifierRegistry,
+            CombatNormalAttackTargetDamageReductionResolver
+                targetDamageReductionResolver)
+        {
+            if (state == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(state));
+            }
+
+            if (metadataFactory == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(metadataFactory));
+            }
+
+            if (eventLog == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(eventLog));
+            }
+
+            if (eventResolutionEngine == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(eventResolutionEngine));
+            }
+
+            if (sourceDamageModifierRegistry == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(sourceDamageModifierRegistry));
+            }
+
+            if (targetDamageReductionResolver == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(
+                        targetDamageReductionResolver));
+            }
+
+            _state =
+                state;
+
+            _eventLog =
+                eventLog;
+
+            _columnStartResolver =
+                new CombatColumnStartResolver(
+                    metadataFactory,
+                    eventLog);
+
+            _columnResolutionResolver =
+                new CombatColumnResolutionResolver(
+                    state,
+                    metadataFactory,
+                    eventLog,
+                    eventResolutionEngine,
+                    sourceDamageModifierRegistry,
+                    targetDamageReductionResolver);
+        }
+
         public bool HasActiveColumn =>
             _activeColumnEvent != null;
 
@@ -81,9 +191,39 @@ namespace GardenGambit.Simulation.Combat
             ActiveColumnEvent =>
                 _activeColumnEvent;
 
+        public bool ActiveColumnUsesStagedNormalAttack =>
+            _activeColumnEvent != null &&
+            _activeColumnUsesStagedNormalAttack;
+
         public bool HasPendingResolution =>
             _columnResolutionResolver
                 .HasPendingResolution;
+
+        public bool HasActiveNormalAttackExecution =>
+            _columnResolutionResolver
+                .HasActiveNormalAttackExecution;
+
+        public CombatNormalAttackExecutionStage
+            ActiveNormalAttackStage =>
+                _columnResolutionResolver
+                    .ActiveNormalAttackStage;
+
+        public CombatNormalAttackEventBatch
+            ActiveNormalAttackBatch =>
+                _columnResolutionResolver
+                    .ActiveNormalAttackBatch;
+
+        public
+            CombatNormalAttackSourceDamageModifierRegistry
+            SourceDamageModifierRegistry =>
+                _columnResolutionResolver
+                    .SourceDamageModifierRegistry;
+
+        public
+            CombatNormalAttackTargetDamageReductionResolver
+            TargetDamageReductionResolver =>
+                _columnResolutionResolver
+                    .TargetDamageReductionResolver;
 
         public int StartAndResolveColumn(
             CombatStartedCombatEvent
@@ -93,6 +233,85 @@ namespace GardenGambit.Simulation.Combat
             int maximumPassCountPerExchange,
             int maximumEventCountPerPass,
             int maximumTriggerCountPerEvent)
+        {
+            return StartAndResolveColumnCore(
+                combatStartedEvent,
+                column,
+                maximumExchangeCount,
+                maximumPassCountPerExchange,
+                maximumEventCountPerPass,
+                maximumTriggerCountPerEvent,
+                useStagedNormalAttack: false);
+        }
+
+        public int StartAndResolveColumnStaged(
+            CombatStartedCombatEvent
+                combatStartedEvent,
+            BoardColumn column,
+            int maximumExchangeCount,
+            int maximumPassCountPerExchange,
+            int maximumEventCountPerPass,
+            int maximumTriggerCountPerEvent)
+        {
+            return StartAndResolveColumnCore(
+                combatStartedEvent,
+                column,
+                maximumExchangeCount,
+                maximumPassCountPerExchange,
+                maximumEventCountPerPass,
+                maximumTriggerCountPerEvent,
+                useStagedNormalAttack: true);
+        }
+
+        public int ResumeActiveColumn(
+            int maximumExchangeCount,
+            int maximumPassCountPerExchange,
+            int maximumEventCountPerPass,
+            int maximumTriggerCountPerEvent)
+        {
+            return ResumeActiveColumnCore(
+                maximumExchangeCount,
+                maximumPassCountPerExchange,
+                maximumEventCountPerPass,
+                maximumTriggerCountPerEvent,
+                useStagedNormalAttack: false);
+        }
+
+        public int ResumeActiveColumnStaged(
+            int maximumExchangeCount,
+            int maximumPassCountPerExchange,
+            int maximumEventCountPerPass,
+            int maximumTriggerCountPerEvent)
+        {
+            return ResumeActiveColumnCore(
+                maximumExchangeCount,
+                maximumPassCountPerExchange,
+                maximumEventCountPerPass,
+                maximumTriggerCountPerEvent,
+                useStagedNormalAttack: true);
+        }
+
+        public int CompletePendingResolution(
+            int maximumPassCount,
+            int maximumEventCountPerPass,
+            int maximumTriggerCountPerEvent)
+        {
+            return _columnResolutionResolver
+                .CompletePendingResolution(
+                    maximumPassCount,
+                    maximumEventCountPerPass,
+                    maximumTriggerCountPerEvent);
+        }
+
+        private int StartAndResolveColumnCore(
+            CombatStartedCombatEvent
+                combatStartedEvent,
+            BoardColumn column,
+            int maximumExchangeCount,
+            int maximumPassCountPerExchange,
+            int maximumEventCountPerPass,
+            int maximumTriggerCountPerEvent,
+            bool useStagedNormalAttack)
         {
             if (combatStartedEvent == null)
             {
@@ -150,25 +369,45 @@ namespace GardenGambit.Simulation.Combat
             _activeColumnEvent =
                 columnStartedEvent;
 
-            var exchangeCount =
-                _columnResolutionResolver
-                    .ResolveStartedColumn(
-                        columnStartedEvent,
-                        maximumExchangeCount,
-                        maximumPassCountPerExchange,
-                        maximumEventCountPerPass,
-                        maximumTriggerCountPerEvent);
+            _activeColumnUsesStagedNormalAttack =
+                useStagedNormalAttack;
 
-            _activeColumnEvent = null;
+            int exchangeCount;
+
+            if (useStagedNormalAttack)
+            {
+                exchangeCount =
+                    _columnResolutionResolver
+                        .ResolveStartedColumnStaged(
+                            columnStartedEvent,
+                            maximumExchangeCount,
+                            maximumPassCountPerExchange,
+                            maximumEventCountPerPass,
+                            maximumTriggerCountPerEvent);
+            }
+            else
+            {
+                exchangeCount =
+                    _columnResolutionResolver
+                        .ResolveStartedColumn(
+                            columnStartedEvent,
+                            maximumExchangeCount,
+                            maximumPassCountPerExchange,
+                            maximumEventCountPerPass,
+                            maximumTriggerCountPerEvent);
+            }
+
+            ClearActiveColumn();
 
             return exchangeCount;
         }
 
-        public int ResumeActiveColumn(
+        private int ResumeActiveColumnCore(
             int maximumExchangeCount,
             int maximumPassCountPerExchange,
             int maximumEventCountPerPass,
-            int maximumTriggerCountPerEvent)
+            int maximumTriggerCountPerEvent,
+            bool useStagedNormalAttack)
         {
             if (_activeColumnEvent == null)
             {
@@ -182,30 +421,63 @@ namespace GardenGambit.Simulation.Combat
                 maximumEventCountPerPass,
                 maximumTriggerCountPerEvent);
 
-            var exchangeCount =
-                _columnResolutionResolver
-                    .ResolveStartedColumn(
-                        _activeColumnEvent,
-                        maximumExchangeCount,
-                        maximumPassCountPerExchange,
-                        maximumEventCountPerPass,
-                        maximumTriggerCountPerEvent);
+            if (_activeColumnUsesStagedNormalAttack !=
+                useStagedNormalAttack)
+            {
+                var activeMode =
+                    _activeColumnUsesStagedNormalAttack
+                        ? "staged"
+                        : "legacy";
 
-            _activeColumnEvent = null;
+                var requestedMode =
+                    useStagedNormalAttack
+                        ? "staged"
+                        : "legacy";
+
+                throw new InvalidOperationException(
+                    $"The active column uses {activeMode} " +
+                    $"Normal Attack resolution and cannot " +
+                    $"be resumed through the " +
+                    $"{requestedMode} path.");
+            }
+
+            int exchangeCount;
+
+            if (useStagedNormalAttack)
+            {
+                exchangeCount =
+                    _columnResolutionResolver
+                        .ResolveStartedColumnStaged(
+                            _activeColumnEvent,
+                            maximumExchangeCount,
+                            maximumPassCountPerExchange,
+                            maximumEventCountPerPass,
+                            maximumTriggerCountPerEvent);
+            }
+            else
+            {
+                exchangeCount =
+                    _columnResolutionResolver
+                        .ResolveStartedColumn(
+                            _activeColumnEvent,
+                            maximumExchangeCount,
+                            maximumPassCountPerExchange,
+                            maximumEventCountPerPass,
+                            maximumTriggerCountPerEvent);
+            }
+
+            ClearActiveColumn();
 
             return exchangeCount;
         }
 
-        public int CompletePendingResolution(
-            int maximumPassCount,
-            int maximumEventCountPerPass,
-            int maximumTriggerCountPerEvent)
+        private void ClearActiveColumn()
         {
-            return _columnResolutionResolver
-                .CompletePendingResolution(
-                    maximumPassCount,
-                    maximumEventCountPerPass,
-                    maximumTriggerCountPerEvent);
+            _activeColumnEvent =
+                null;
+
+            _activeColumnUsesStagedNormalAttack =
+                false;
         }
 
         private void ValidateLoggedCombatStartedEvent(
@@ -244,6 +516,26 @@ namespace GardenGambit.Simulation.Combat
                     "trigger-root event.",
                     nameof(combatStartedEvent));
             }
+        }
+
+        private static
+            CombatNormalAttackTargetDamageReductionResolver
+            CreateDefaultTargetReductionResolver()
+        {
+            var usageRegistry =
+                new CombatPetCardTriggerUsageRegistry();
+
+            var usageCommitter =
+                new CombatPetCardTriggerUsageCommitter(
+                    usageRegistry);
+
+            var reductionRegistry =
+                new
+                    CombatNormalAttackTargetDamageReductionRegistry();
+
+            return new CombatNormalAttackTargetDamageReductionResolver(
+                reductionRegistry,
+                usageCommitter);
         }
 
         private static void ValidateBudgets(

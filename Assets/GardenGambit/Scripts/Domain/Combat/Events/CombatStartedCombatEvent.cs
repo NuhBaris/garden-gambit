@@ -2,7 +2,8 @@ using System;
 
 namespace GardenGambit.Domain.Combat
 {
-    public sealed class CombatStartedCombatEvent :
+    public sealed class
+        CombatStartedCombatEvent :
         CombatEvent
     {
         public CombatStartedCombatEvent(
@@ -10,6 +11,38 @@ namespace GardenGambit.Domain.Combat
             : base(
                 metadata,
                 CombatEventKind.CombatStarted)
+        {
+            ValidateRootMetadata(
+                metadata);
+        }
+
+        public CombatStartedCombatEvent(
+            CombatEventMetadata metadata,
+            CombatBattleStartSnapshot
+                battleStartSnapshot)
+            : this(metadata)
+        {
+            if (battleStartSnapshot == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(battleStartSnapshot));
+            }
+
+            BattleStartSnapshot =
+                battleStartSnapshot;
+        }
+
+        public CombatBattleStartSnapshot
+            BattleStartSnapshot
+        {
+            get;
+        }
+
+        public bool HasBattleStartSnapshot =>
+            BattleStartSnapshot != null;
+
+        private static void ValidateRootMetadata(
+            CombatEventMetadata metadata)
         {
             if (!metadata.IsTriggerRoot)
             {

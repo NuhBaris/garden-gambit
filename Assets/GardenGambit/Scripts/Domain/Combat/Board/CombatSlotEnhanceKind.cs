@@ -4,6 +4,12 @@ namespace GardenGambit.Domain.Combat
     {
         None = 0,
 
-        ProtectiveSeal = 1
+        ProtectiveSeal = 1,
+
+        WarBanner = 2,
+
+        SacrificialAltar = 3,
+
+        WarAltar = 4
     }
 }

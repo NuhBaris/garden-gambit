@@ -9,6 +9,21 @@ namespace GardenGambit.Domain.Combat
         public CombatState(
             CombatSideState player,
             CombatSideState enemy)
+            : this(
+                player,
+                enemy,
+                CreateEmptyPetSide(
+                    CombatSide.Player),
+                CreateEmptyPetSide(
+                    CombatSide.Enemy))
+        {
+        }
+
+        public CombatState(
+            CombatSideState player,
+            CombatSideState enemy,
+            CombatSidePetState playerPets,
+            CombatSidePetState enemyPets)
         {
             if (player == null)
             {
@@ -36,32 +51,74 @@ namespace GardenGambit.Domain.Combat
                     nameof(enemy));
             }
 
-            var instanceIds =
-                new HashSet<InstanceId>();
-
-            foreach (var card in player.Cards.Cards)
+            if (playerPets == null)
             {
-                instanceIds.Add(card.InstanceId);
+                throw new ArgumentNullException(
+                    nameof(playerPets));
             }
 
-            foreach (var card in enemy.Cards.Cards)
+            if (enemyPets == null)
             {
-                if (!instanceIds.Add(card.InstanceId))
-                {
-                    throw new ArgumentException(
-                        $"Duplicate cross-side InstanceId " +
-                        $"detected: {card.InstanceId}.",
-                        nameof(enemy));
-                }
+                throw new ArgumentNullException(
+                    nameof(enemyPets));
             }
 
-            Player = player;
-            Enemy = enemy;
+            if (playerPets.Side !=
+                CombatSide.Player)
+            {
+                throw new ArgumentException(
+                    "Player Pet state must use the " +
+                    "Player side.",
+                    nameof(playerPets));
+            }
+
+            if (enemyPets.Side !=
+                CombatSide.Enemy)
+            {
+                throw new ArgumentException(
+                    "Enemy Pet state must use the " +
+                    "Enemy side.",
+                    nameof(enemyPets));
+            }
+
+            ValidateUniqueInstanceIds(
+                player,
+                enemy,
+                playerPets,
+                enemyPets);
+
+            Player =
+                player;
+
+            Enemy =
+                enemy;
+
+            PlayerPets =
+                playerPets;
+
+            EnemyPets =
+                enemyPets;
         }
 
-        public CombatSideState Player { get; }
+        public CombatSideState Player
+        {
+            get;
+        }
 
-        public CombatSideState Enemy { get; }
+        public CombatSideState Enemy
+        {
+            get;
+        }
+
+        public CombatSidePetState PlayerPets
+        {
+            get;
+        }
+
+        public CombatSidePetState EnemyPets
+        {
+            get;
+        }
 
         public CombatSideState GetSide(
             CombatSide side)
@@ -99,6 +156,92 @@ namespace GardenGambit.Domain.Combat
                 nameof(side),
                 side,
                 "Combat side must be Player or Enemy.");
+        }
+
+        public CombatSidePetState GetPets(
+            CombatSide side)
+        {
+            if (side == CombatSide.Player)
+            {
+                return PlayerPets;
+            }
+
+            if (side == CombatSide.Enemy)
+            {
+                return EnemyPets;
+            }
+
+            throw new ArgumentOutOfRangeException(
+                nameof(side),
+                side,
+                "Combat Pet side must be Player " +
+                "or Enemy.");
+        }
+
+        private static void ValidateUniqueInstanceIds(
+            CombatSideState player,
+            CombatSideState enemy,
+            CombatSidePetState playerPets,
+            CombatSidePetState enemyPets)
+        {
+            var instanceIds =
+                new HashSet<InstanceId>();
+
+            foreach (var card in
+                     player.Cards.Cards)
+            {
+                instanceIds.Add(
+                    card.InstanceId);
+            }
+
+            foreach (var card in
+                     enemy.Cards.Cards)
+            {
+                if (!instanceIds.Add(
+                        card.InstanceId))
+                {
+                    throw new ArgumentException(
+                        $"Duplicate cross-side InstanceId " +
+                        $"detected: {card.InstanceId}.",
+                        nameof(enemy));
+                }
+            }
+
+            foreach (var pet in
+                     playerPets.Pets.Pets)
+            {
+                if (!instanceIds.Add(
+                        pet.InstanceId))
+                {
+                    throw new ArgumentException(
+                        $"Duplicate card/Pet InstanceId " +
+                        $"detected: {pet.InstanceId}.",
+                        nameof(playerPets));
+                }
+            }
+
+            foreach (var pet in
+                     enemyPets.Pets.Pets)
+            {
+                if (!instanceIds.Add(
+                        pet.InstanceId))
+                {
+                    throw new ArgumentException(
+                        $"Duplicate card/Pet InstanceId " +
+                        $"detected: {pet.InstanceId}.",
+                        nameof(enemyPets));
+                }
+            }
+        }
+
+        private static CombatSidePetState
+            CreateEmptyPetSide(
+                CombatSide side)
+        {
+            return new CombatSidePetState(
+                side,
+                new CombatPetRegistry(
+                    new CombatPetState[0]));
         }
     }
 }

@@ -255,11 +255,19 @@ namespace GardenGambit.Tests.EditMode
                 Is.EqualTo(1));
 
             Assert.That(
-                environment.EventLog.Count,
-                Is.EqualTo(8));
+                CountEvents(
+                    environment.EventLog,
+                    CombatEventKind
+                        .BattleStartStageStarted),
+                Is.EqualTo(3));
 
             Assert.That(
-                environment.EventLog.Events[7],
+                environment.EventLog.Count,
+                Is.EqualTo(11));
+
+            Assert.That(
+                environment.EventLog.Events[
+                    environment.EventLog.Count - 1],
                 Is.SameAs(completedEvent));
         }
 
@@ -342,8 +350,15 @@ namespace GardenGambit.Tests.EditMode
                 Is.EqualTo(1));
 
             Assert.That(
+                CountEvents(
+                    environment.EventLog,
+                    CombatEventKind
+                        .BattleStartStageStarted),
+                Is.EqualTo(3));
+
+            Assert.That(
                 environment.EventLog.Count,
-                Is.EqualTo(9));
+                Is.EqualTo(12));
 
             var resultEvent =
                 GetSingleResultEvent(

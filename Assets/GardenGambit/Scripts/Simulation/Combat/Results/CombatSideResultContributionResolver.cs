@@ -6,6 +6,16 @@ namespace GardenGambit.Simulation.Combat
     public sealed class
         CombatSideResultContributionResolver
     {
+        private readonly
+            WarBannerAttackMultiplierResolver
+            _warBannerAttackMultiplierResolver;
+
+        public CombatSideResultContributionResolver()
+        {
+            _warBannerAttackMultiplierResolver =
+                new WarBannerAttackMultiplierResolver();
+        }
+
         public CombatSideResultContribution Resolve(
             CombatSideState sideState)
         {
@@ -49,11 +59,16 @@ namespace GardenGambit.Simulation.Combat
                         card.Rank.Value);
             }
 
+            var finalAttackMultiplier =
+                _warBannerAttackMultiplierResolver
+                    .Resolve(
+                        sideState);
+
             return new CombatSideResultContribution(
                 sideState.Side,
                 survivorCount,
                 totalSurvivorRankContribution,
-                sideState.AttackMultiplier);
+                finalAttackMultiplier);
         }
     }
 }

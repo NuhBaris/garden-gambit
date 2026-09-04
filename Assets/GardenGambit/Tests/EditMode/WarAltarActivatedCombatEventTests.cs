@@ -1,0 +1,342 @@
+using System;
+using GardenGambit.Domain.Combat;
+using GardenGambit.Domain.Identity;
+using NUnit.Framework;
+
+namespace GardenGambit.Tests.EditMode
+{
+    public sealed class
+        WarAltarActivatedCombatEventTests
+    {
+        [Test]
+        public void Constructor_WithPositiveAttack_SetsSnapshot()
+        {
+            var metadata =
+                CreateMetadata();
+
+            var donorPosition =
+                CreateValidDonorPosition();
+
+            var recipientPosition =
+                CreateValidRecipientPosition();
+
+            var altarEvent =
+                new WarAltarActivatedCombatEvent(
+                    metadata,
+                    new InstanceId(100),
+                    donorPosition,
+                    new InstanceId(200),
+                    recipientPosition,
+                    transferredAttack: 4,
+                    donorPreviousHp: 6);
+
+            Assert.That(
+                altarEvent.Kind,
+                Is.EqualTo(
+                    CombatEventKind.WarAltarActivated));
+
+            Assert.That(
+                altarEvent.Metadata.EventId,
+                Is.EqualTo(
+                    metadata.EventId));
+
+            Assert.That(
+                altarEvent.DonorInstanceId,
+                Is.EqualTo(
+                    new InstanceId(100)));
+
+            Assert.That(
+                altarEvent.DonorPosition,
+                Is.EqualTo(
+                    donorPosition));
+
+            Assert.That(
+                altarEvent.RecipientInstanceId,
+                Is.EqualTo(
+                    new InstanceId(200)));
+
+            Assert.That(
+                altarEvent.RecipientPosition,
+                Is.EqualTo(
+                    recipientPosition));
+
+            Assert.That(
+                altarEvent.TransferredAttack,
+                Is.EqualTo(4));
+
+            Assert.That(
+                altarEvent.DonorPreviousHp,
+                Is.EqualTo(6));
+
+            Assert.That(
+                altarEvent.HasPositiveTransfer,
+                Is.True);
+        }
+
+        [Test]
+        public void Constructor_WithZeroAttack_AllowsSnapshot()
+        {
+            var altarEvent =
+                new WarAltarActivatedCombatEvent(
+                    CreateMetadata(),
+                    new InstanceId(100),
+                    CreateValidDonorPosition(),
+                    new InstanceId(200),
+                    CreateValidRecipientPosition(),
+                    transferredAttack: 0,
+                    donorPreviousHp: 6);
+
+            Assert.That(
+                altarEvent.TransferredAttack,
+                Is.Zero);
+
+            Assert.That(
+                altarEvent.DonorPreviousHp,
+                Is.EqualTo(6));
+
+            Assert.That(
+                altarEvent.HasPositiveTransfer,
+                Is.False);
+        }
+
+        [Test]
+        public void Constructor_WithInvalidMetadata_Throws()
+        {
+            Assert.Throws<ArgumentException>(
+                () => _ =
+                    new WarAltarActivatedCombatEvent(
+                        default(CombatEventMetadata),
+                        new InstanceId(100),
+                        CreateValidDonorPosition(),
+                        new InstanceId(200),
+                        CreateValidRecipientPosition(),
+                        transferredAttack: 4,
+                        donorPreviousHp: 6));
+        }
+
+        [Test]
+        public void Constructor_WithInvalidDonorInstanceId_Throws()
+        {
+            Assert.Throws<ArgumentException>(
+                () => _ =
+                    new WarAltarActivatedCombatEvent(
+                        CreateMetadata(),
+                        default(InstanceId),
+                        CreateValidDonorPosition(),
+                        new InstanceId(200),
+                        CreateValidRecipientPosition(),
+                        transferredAttack: 4,
+                        donorPreviousHp: 6));
+        }
+
+        [Test]
+        public void Constructor_WithInvalidDonorPosition_Throws()
+        {
+            Assert.Throws<ArgumentException>(
+                () => _ =
+                    new WarAltarActivatedCombatEvent(
+                        CreateMetadata(),
+                        new InstanceId(100),
+                        default(BoardPosition),
+                        new InstanceId(200),
+                        CreateValidRecipientPosition(),
+                        transferredAttack: 4,
+                        donorPreviousHp: 6));
+        }
+
+        [Test]
+        public void Constructor_WithInvalidRecipientInstanceId_Throws()
+        {
+            Assert.Throws<ArgumentException>(
+                () => _ =
+                    new WarAltarActivatedCombatEvent(
+                        CreateMetadata(),
+                        new InstanceId(100),
+                        CreateValidDonorPosition(),
+                        default(InstanceId),
+                        CreateValidRecipientPosition(),
+                        transferredAttack: 4,
+                        donorPreviousHp: 6));
+        }
+
+        [Test]
+        public void Constructor_WithInvalidRecipientPosition_Throws()
+        {
+            Assert.Throws<ArgumentException>(
+                () => _ =
+                    new WarAltarActivatedCombatEvent(
+                        CreateMetadata(),
+                        new InstanceId(100),
+                        CreateValidDonorPosition(),
+                        new InstanceId(200),
+                        default(BoardPosition),
+                        transferredAttack: 4,
+                        donorPreviousHp: 6));
+        }
+
+        [Test]
+        public void Constructor_WithSameCardInstance_Throws()
+        {
+            Assert.Throws<ArgumentException>(
+                () => _ =
+                    new WarAltarActivatedCombatEvent(
+                        CreateMetadata(),
+                        new InstanceId(100),
+                        CreateValidDonorPosition(),
+                        new InstanceId(100),
+                        CreateValidRecipientPosition(),
+                        transferredAttack: 4,
+                        donorPreviousHp: 6));
+        }
+
+        [Test]
+        public void Constructor_WithRecipientOnDifferentSide_Throws()
+        {
+            var recipientPosition =
+                CreatePosition(
+                    CombatSide.Enemy,
+                    BoardRow.Back,
+                    column: 3);
+
+            Assert.Throws<ArgumentException>(
+                () => _ =
+                    new WarAltarActivatedCombatEvent(
+                        CreateMetadata(),
+                        new InstanceId(100),
+                        CreateValidDonorPosition(),
+                        new InstanceId(200),
+                        recipientPosition,
+                        transferredAttack: 4,
+                        donorPreviousHp: 6));
+        }
+
+        [Test]
+        public void Constructor_WithRecipientInDifferentColumn_Throws()
+        {
+            var recipientPosition =
+                CreatePosition(
+                    CombatSide.Player,
+                    BoardRow.Back,
+                    column: 4);
+
+            Assert.Throws<ArgumentException>(
+                () => _ =
+                    new WarAltarActivatedCombatEvent(
+                        CreateMetadata(),
+                        new InstanceId(100),
+                        CreateValidDonorPosition(),
+                        new InstanceId(200),
+                        recipientPosition,
+                        transferredAttack: 4,
+                        donorPreviousHp: 6));
+        }
+
+        [Test]
+        public void Constructor_WithRecipientInSameRow_Throws()
+        {
+            var recipientPosition =
+                CreatePosition(
+                    CombatSide.Player,
+                    BoardRow.Front,
+                    column: 3);
+
+            Assert.Throws<ArgumentException>(
+                () => _ =
+                    new WarAltarActivatedCombatEvent(
+                        CreateMetadata(),
+                        new InstanceId(100),
+                        CreateValidDonorPosition(),
+                        new InstanceId(200),
+                        recipientPosition,
+                        transferredAttack: 4,
+                        donorPreviousHp: 6));
+        }
+
+        [Test]
+        public void Constructor_WithNegativeTransferredAttack_Throws()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => _ =
+                    new WarAltarActivatedCombatEvent(
+                        CreateMetadata(),
+                        new InstanceId(100),
+                        CreateValidDonorPosition(),
+                        new InstanceId(200),
+                        CreateValidRecipientPosition(),
+                        transferredAttack: -1,
+                        donorPreviousHp: 6));
+        }
+
+        [Test]
+        public void Constructor_WithZeroDonorPreviousHp_Throws()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => _ =
+                    new WarAltarActivatedCombatEvent(
+                        CreateMetadata(),
+                        new InstanceId(100),
+                        CreateValidDonorPosition(),
+                        new InstanceId(200),
+                        CreateValidRecipientPosition(),
+                        transferredAttack: 4,
+                        donorPreviousHp: 0));
+        }
+
+        [Test]
+        public void Constructor_WithNegativeDonorPreviousHp_Throws()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => _ =
+                    new WarAltarActivatedCombatEvent(
+                        CreateMetadata(),
+                        new InstanceId(100),
+                        CreateValidDonorPosition(),
+                        new InstanceId(200),
+                        CreateValidRecipientPosition(),
+                        transferredAttack: 4,
+                        donorPreviousHp: -1));
+        }
+
+        private static CombatEventMetadata
+            CreateMetadata()
+        {
+            var eventId =
+                new CombatEventId(1);
+
+            return new CombatEventMetadata(
+                eventId,
+                new CombatSequenceNumber(1),
+                null,
+                eventId);
+        }
+
+        private static BoardPosition
+            CreateValidDonorPosition()
+        {
+            return CreatePosition(
+                CombatSide.Player,
+                BoardRow.Front,
+                column: 3);
+        }
+
+        private static BoardPosition
+            CreateValidRecipientPosition()
+        {
+            return CreatePosition(
+                CombatSide.Player,
+                BoardRow.Back,
+                column: 3);
+        }
+
+        private static BoardPosition CreatePosition(
+            CombatSide side,
+            BoardRow row,
+            int column)
+        {
+            return new BoardPosition(
+                side,
+                row,
+                new BoardColumn(column));
+        }
+    }
+}

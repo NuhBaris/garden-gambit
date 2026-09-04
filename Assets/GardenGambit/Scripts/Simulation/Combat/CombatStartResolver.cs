@@ -11,6 +11,9 @@ namespace GardenGambit.Simulation.Combat
         private readonly CombatEventLog
             _eventLog;
 
+        private readonly CombatBattleStartSnapshotResolver
+            _snapshotResolver;
+
         public CombatStartResolver(
             CombatEventMetadataFactory metadataFactory,
             CombatEventLog eventLog)
@@ -27,8 +30,14 @@ namespace GardenGambit.Simulation.Combat
                     nameof(eventLog));
             }
 
-            _metadataFactory = metadataFactory;
-            _eventLog = eventLog;
+            _metadataFactory =
+                metadataFactory;
+
+            _eventLog =
+                eventLog;
+
+            _snapshotResolver =
+                new CombatBattleStartSnapshotResolver();
         }
 
         public CombatStartedCombatEvent Start(
@@ -54,12 +63,17 @@ namespace GardenGambit.Simulation.Combat
                     "empty tombstone registry.");
             }
 
+            var battleStartSnapshot =
+                _snapshotResolver.Resolve(
+                    state);
+
             var metadata =
                 _metadataFactory.CreateRoot();
 
             var combatStartedEvent =
                 new CombatStartedCombatEvent(
-                    metadata);
+                    metadata,
+                    battleStartSnapshot);
 
             _eventLog.Append(
                 combatStartedEvent);

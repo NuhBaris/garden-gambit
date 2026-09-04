@@ -1,5 +1,6 @@
 using System;
 using GardenGambit.Domain.Combat;
+using GardenGambit.Domain.Identity;
 
 namespace GardenGambit.Simulation.Combat
 {
@@ -40,28 +41,10 @@ namespace GardenGambit.Simulation.Combat
                     nameof(damageEvent));
             }
 
-            if (!_eventLog.ContainsEvent(
-                    damageEvent.Metadata.EventId))
-            {
-                throw new ArgumentException(
-                    "Damage event must already exist " +
-                    "in the combat event log.",
-                    nameof(damageEvent));
-            }
-
-            var loggedDamageEvent =
-                _eventLog.GetEvent(
-                    damageEvent.Metadata.EventId);
-
-            if (!ReferenceEquals(
-                    loggedDamageEvent,
-                    damageEvent))
-            {
-                throw new ArgumentException(
-                    "Damage event must be the exact event " +
-                    "stored in the combat event log.",
-                    nameof(damageEvent));
-            }
+            ValidateLoggedEvent(
+                damageEvent,
+                nameof(damageEvent),
+                "Damage");
 
             if (!damageEvent.Result
                     .EnteredDeathThreshold)
@@ -70,7 +53,8 @@ namespace GardenGambit.Simulation.Combat
             }
 
             EnsureDeathNotAlreadyLogged(
-                damageEvent);
+                damageEvent,
+                "damage event");
 
             var metadata =
                 _metadataFactory.CreateChild(
@@ -84,13 +68,124 @@ namespace GardenGambit.Simulation.Combat
                     damageEvent.Result.PreviousHp,
                     damageEvent.Result.CurrentHp);
 
-            _eventLog.Append(deathEvent);
+            _eventLog.Append(
+                deathEvent);
 
             return deathEvent;
         }
 
+        public DeathCombatEvent AppendFromAltar(
+            CombatEvent altarEvent)
+        {
+            if (altarEvent == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(altarEvent));
+            }
+
+            InstanceId donorInstanceId;
+            BoardPosition donorPosition;
+            int donorPreviousHp;
+
+            var sacrificialEvent =
+                altarEvent as
+                    SacrificialAltarActivatedCombatEvent;
+
+            if (sacrificialEvent != null)
+            {
+                donorInstanceId =
+                    sacrificialEvent.DonorInstanceId;
+
+                donorPosition =
+                    sacrificialEvent.DonorPosition;
+
+                donorPreviousHp =
+                    sacrificialEvent.DonorPreviousHp;
+            }
+            else
+            {
+                var warEvent =
+                    altarEvent as
+                        WarAltarActivatedCombatEvent;
+
+                if (warEvent == null)
+                {
+                    throw new ArgumentException(
+                        "An Altar activation event is " +
+                        "required.",
+                        nameof(altarEvent));
+                }
+
+                donorInstanceId =
+                    warEvent.DonorInstanceId;
+
+                donorPosition =
+                    warEvent.DonorPosition;
+
+                donorPreviousHp =
+                    warEvent.DonorPreviousHp;
+            }
+
+            ValidateLoggedEvent(
+                altarEvent,
+                nameof(altarEvent),
+                "Altar activation");
+
+            EnsureDeathNotAlreadyLogged(
+                altarEvent,
+                "Altar activation event");
+
+            var metadata =
+                _metadataFactory.CreateChild(
+                    altarEvent.Metadata);
+
+            var deathEvent =
+                new DeathCombatEvent(
+                    metadata,
+                    donorInstanceId,
+                    donorPosition,
+                    donorPreviousHp,
+                    currentHp: 0);
+
+            _eventLog.Append(
+                deathEvent);
+
+            return deathEvent;
+        }
+
+        private void ValidateLoggedEvent(
+            CombatEvent combatEvent,
+            string parameterName,
+            string eventDescription)
+        {
+            if (!_eventLog.ContainsEvent(
+                    combatEvent.Metadata.EventId))
+            {
+                throw new ArgumentException(
+                    $"{eventDescription} event must already " +
+                    "exist in the combat event log.",
+                    parameterName);
+            }
+
+            var loggedEvent =
+                _eventLog.GetEvent(
+                    combatEvent.Metadata.EventId);
+
+            if (!ReferenceEquals(
+                    loggedEvent,
+                    combatEvent))
+            {
+                throw new ArgumentException(
+                    $"{eventDescription} event must be the " +
+                    "exact event stored in the combat " +
+                    "event log.",
+                    parameterName);
+            }
+        }
+
         private void EnsureDeathNotAlreadyLogged(
-            DamageAppliedCombatEvent damageEvent)
+            CombatEvent parentEvent,
+            string parentDescription)
         {
             for (var index = 0;
                  index < _eventLog.Count;
@@ -112,11 +207,11 @@ namespace GardenGambit.Simulation.Combat
 
                 if (existingEvent.Metadata
                         .ParentEventId.Value ==
-                    damageEvent.Metadata.EventId)
+                    parentEvent.Metadata.EventId)
                 {
                     throw new InvalidOperationException(
                         "A Death event has already been " +
-                        "logged for this damage event.");
+                        $"logged for this {parentDescription}.");
                 }
             }
         }

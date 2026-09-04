@@ -30,6 +30,12 @@ namespace GardenGambit.Domain.Combat
 
         BattleHealthChanged = 13,
 
-        CombatCompleted = 14
+        CombatCompleted = 14,
+
+        SacrificialAltarActivated = 15,
+
+        WarAltarActivated = 16,
+
+        BattleStartStageStarted = 17
     }
 }
