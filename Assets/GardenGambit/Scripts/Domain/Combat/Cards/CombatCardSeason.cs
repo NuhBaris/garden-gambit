@@ -10,6 +10,8 @@ namespace GardenGambit.Domain.Combat
 
         Autumn = 3,
 
-        Winter = 4
+        Winter = 4,
+
+        Seasonless = 5
     }
 }

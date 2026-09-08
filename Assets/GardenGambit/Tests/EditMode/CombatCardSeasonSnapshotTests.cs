@@ -96,13 +96,13 @@ namespace GardenGambit.Tests.EditMode
 
         [Test]
         public void
-            SeasonConstructor_WithValueAboveRange_Throws()
+        SeasonConstructor_WithValueAboveRange_Throws()
         {
             Assert.Throws<
                 ArgumentOutOfRangeException>(
                 () => _ =
                     CreateCard(
-                        (CombatCardSeason)5));
+                        (CombatCardSeason)6));
         }
 
         [Test]

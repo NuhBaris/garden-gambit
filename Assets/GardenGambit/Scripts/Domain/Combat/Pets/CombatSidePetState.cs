@@ -5,6 +5,12 @@ namespace GardenGambit.Domain.Combat
 {
     public sealed class CombatSidePetState
     {
+        public const int MaximumPetCount = 2;
+
+        public const int UpperPetSourceOrder = 0;
+
+        public const int LowerPetSourceOrder = 1;
+
         public CombatSidePetState(
             CombatSide side,
             CombatPetRegistry pets)
@@ -22,6 +28,14 @@ namespace GardenGambit.Domain.Combat
             if (pets == null)
             {
                 throw new ArgumentNullException(
+                    nameof(pets));
+            }
+
+            if (pets.Count > MaximumPetCount)
+            {
+                throw new ArgumentException(
+                    "A combat side cannot contain more " +
+                    "than two Pets.",
                     nameof(pets));
             }
 
@@ -87,6 +101,32 @@ namespace GardenGambit.Domain.Combat
                 $"Pet {instanceId} does not belong " +
                 $"to the {Side} combat Pet side.",
                 nameof(instanceId));
+        }
+
+        public BoardRow GetAffectedRowAt(
+            int sourceOrder)
+        {
+            GetPetAt(
+                sourceOrder);
+
+            if (sourceOrder ==
+                UpperPetSourceOrder)
+            {
+                return BoardRow.Front;
+            }
+
+            return BoardRow.Back;
+        }
+
+        public BoardRow GetAffectedRow(
+            InstanceId petInstanceId)
+        {
+            var sourceOrder =
+                GetSourceOrder(
+                    petInstanceId);
+
+            return GetAffectedRowAt(
+                sourceOrder);
         }
     }
 }

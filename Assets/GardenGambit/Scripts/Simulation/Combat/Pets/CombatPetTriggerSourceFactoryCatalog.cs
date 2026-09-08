@@ -18,6 +18,9 @@ namespace GardenGambit.Simulation.Combat
             CombatNormalAttackTargetDamageReductionRegistry
             _targetDamageReductionRegistry;
 
+        private readonly CombatFinalRankModifierRegistry
+            _finalRankModifierRegistry;
+
         public CombatPetTriggerSourceFactoryCatalog(
             CombatPetCardTriggerUsageCommitter
                 usageCommitter,
@@ -38,6 +41,24 @@ namespace GardenGambit.Simulation.Combat
                 sourceDamageModifierRegistry,
             CombatNormalAttackTargetDamageReductionRegistry
                 targetDamageReductionRegistry)
+            : this(
+                usageCommitter,
+                sourceDamageModifierRegistry,
+                targetDamageReductionRegistry,
+                new
+                    CombatFinalRankModifierRegistry())
+        {
+        }
+
+        public CombatPetTriggerSourceFactoryCatalog(
+            CombatPetCardTriggerUsageCommitter
+                usageCommitter,
+            CombatNormalAttackSourceDamageModifierRegistry
+                sourceDamageModifierRegistry,
+            CombatNormalAttackTargetDamageReductionRegistry
+                targetDamageReductionRegistry,
+            CombatFinalRankModifierRegistry
+                finalRankModifierRegistry)
         {
             if (usageCommitter == null)
             {
@@ -59,6 +80,13 @@ namespace GardenGambit.Simulation.Combat
                         targetDamageReductionRegistry));
             }
 
+            if (finalRankModifierRegistry == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(
+                        finalRankModifierRegistry));
+            }
+
             _usageCommitter =
                 usageCommitter;
 
@@ -67,6 +95,9 @@ namespace GardenGambit.Simulation.Combat
 
             _targetDamageReductionRegistry =
                 targetDamageReductionRegistry;
+
+            _finalRankModifierRegistry =
+                finalRankModifierRegistry;
         }
 
         public CombatPetCardTriggerUsageCommitter
@@ -82,6 +113,10 @@ namespace GardenGambit.Simulation.Combat
             CombatNormalAttackTargetDamageReductionRegistry
             TargetDamageReductionRegistry =>
                 _targetDamageReductionRegistry;
+
+        public CombatFinalRankModifierRegistry
+            FinalRankModifierRegistry =>
+                _finalRankModifierRegistry;
 
         public CombatPetTriggerSourceFactoryRegistry
             CreateRegistry()
@@ -103,7 +138,14 @@ namespace GardenGambit.Simulation.Combat
                                 CombatPetDefinitionIds
                                     .PolarFerret,
                                 _usageCommitter,
-                                _targetDamageReductionRegistry)
+                                _targetDamageReductionRegistry),
+
+                        new
+                            MuskCatPetTriggerSourceFactory(
+                                CombatPetDefinitionIds
+                                    .MuskCat,
+                                _usageCommitter,
+                                _finalRankModifierRegistry)
                     });
         }
     }

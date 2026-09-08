@@ -26,6 +26,9 @@ namespace GardenGambit.Simulation.Combat
         private CombatBattleStartStage
             _nextStage;
 
+        private bool
+            _useStagedAltarResolution;
+
         private int
             _resolvedAltarActivationCount;
 
@@ -93,6 +96,10 @@ namespace GardenGambit.Simulation.Combat
             ActiveCombatStartedEvent =>
                 _activeCombatStartedEvent;
 
+        public bool UsesStagedAltarResolution =>
+            HasActiveResolution &&
+            _useStagedAltarResolution;
+
         public CombatBattleStartStage NextStage =>
             _activeCombatStartedEvent == null
                 ? CombatBattleStartStage.Unspecified
@@ -145,6 +152,19 @@ namespace GardenGambit.Simulation.Combat
         public CombatEvent ActiveAltarEvent =>
             _slotRunner.ActiveAltarEvent;
 
+        public bool HasStagedAltarExecution =>
+            _slotRunner.HasStagedAltarExecution;
+
+        public CombatAltarActivationExecutionState
+            ActiveAltarExecutionState =>
+                _slotRunner
+                    .ActiveAltarExecutionState;
+
+        public CombatAltarActivationExecutionStage
+            ActiveAltarExecutionStage =>
+                _slotRunner
+                    .ActiveAltarExecutionStage;
+
         public bool HasActiveSlotStage =>
             _slotRunner.HasActiveSlotStage;
 
@@ -181,6 +201,60 @@ namespace GardenGambit.Simulation.Combat
             int maximumEventCountPerPass,
             int maximumTriggerCountPerEvent)
         {
+            return StartAndResolveBattleStartCore(
+                combatStartedEvent,
+                maximumPassCountPerStage,
+                maximumEventCountPerPass,
+                maximumTriggerCountPerEvent,
+                useStagedAltarResolution: false);
+        }
+
+        public int StartAndResolveBattleStartStaged(
+            CombatStartedCombatEvent
+                combatStartedEvent,
+            int maximumPassCountPerStage,
+            int maximumEventCountPerPass,
+            int maximumTriggerCountPerEvent)
+        {
+            return StartAndResolveBattleStartCore(
+                combatStartedEvent,
+                maximumPassCountPerStage,
+                maximumEventCountPerPass,
+                maximumTriggerCountPerEvent,
+                useStagedAltarResolution: true);
+        }
+
+        public int ResumeActiveBattleStart(
+            int maximumPassCountPerStage,
+            int maximumEventCountPerPass,
+            int maximumTriggerCountPerEvent)
+        {
+            ValidateBudgets(
+                maximumPassCountPerStage,
+                maximumEventCountPerPass,
+                maximumTriggerCountPerEvent);
+
+            if (_activeCombatStartedEvent == null)
+            {
+                throw new InvalidOperationException(
+                    "There is no active battle-start " +
+                    "resolution to resume.");
+            }
+
+            return ContinueActiveBattleStart(
+                maximumPassCountPerStage,
+                maximumEventCountPerPass,
+                maximumTriggerCountPerEvent);
+        }
+
+        private int StartAndResolveBattleStartCore(
+            CombatStartedCombatEvent
+                combatStartedEvent,
+            int maximumPassCountPerStage,
+            int maximumEventCountPerPass,
+            int maximumTriggerCountPerEvent,
+            bool useStagedAltarResolution)
+        {
             if (combatStartedEvent == null)
             {
                 throw new ArgumentNullException(
@@ -209,31 +283,11 @@ namespace GardenGambit.Simulation.Combat
             _nextStage =
                 CombatBattleStartStage.Slot;
 
+            _useStagedAltarResolution =
+                useStagedAltarResolution;
+
             _resolvedAltarActivationCount =
                 0;
-
-            return ContinueActiveBattleStart(
-                maximumPassCountPerStage,
-                maximumEventCountPerPass,
-                maximumTriggerCountPerEvent);
-        }
-
-        public int ResumeActiveBattleStart(
-            int maximumPassCountPerStage,
-            int maximumEventCountPerPass,
-            int maximumTriggerCountPerEvent)
-        {
-            ValidateBudgets(
-                maximumPassCountPerStage,
-                maximumEventCountPerPass,
-                maximumTriggerCountPerEvent);
-
-            if (_activeCombatStartedEvent == null)
-            {
-                throw new InvalidOperationException(
-                    "There is no active battle-start " +
-                    "resolution to resume.");
-            }
 
             return ContinueActiveBattleStart(
                 maximumPassCountPerStage,
@@ -283,12 +337,26 @@ namespace GardenGambit.Simulation.Combat
             if (_nextStage ==
                 CombatBattleStartStage.Slot)
             {
-                _resolvedAltarActivationCount =
-                    _slotRunner.StartAndResolveSlotStage(
-                        _activeCombatStartedEvent,
-                        maximumPassCountPerStage,
-                        maximumEventCountPerPass,
-                        maximumTriggerCountPerEvent);
+                if (_useStagedAltarResolution)
+                {
+                    _resolvedAltarActivationCount =
+                        _slotRunner
+                            .StartAndResolveSlotStageStaged(
+                                _activeCombatStartedEvent,
+                                maximumPassCountPerStage,
+                                maximumEventCountPerPass,
+                                maximumTriggerCountPerEvent);
+                }
+                else
+                {
+                    _resolvedAltarActivationCount =
+                        _slotRunner
+                            .StartAndResolveSlotStage(
+                                _activeCombatStartedEvent,
+                                maximumPassCountPerStage,
+                                maximumEventCountPerPass,
+                                maximumTriggerCountPerEvent);
+                }
 
                 _nextStage =
                     CombatBattleStartStage.Pet;
@@ -384,6 +452,9 @@ namespace GardenGambit.Simulation.Combat
 
             _nextStage =
                 CombatBattleStartStage.Unspecified;
+
+            _useStagedAltarResolution =
+                false;
 
             _resolvedAltarActivationCount =
                 0;

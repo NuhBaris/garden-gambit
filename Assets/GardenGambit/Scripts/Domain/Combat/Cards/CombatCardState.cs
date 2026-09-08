@@ -67,7 +67,7 @@ namespace GardenGambit.Domain.Combat
                     season,
                     "Combat card season must be " +
                     "Unspecified, Spring, Summer, " +
-                    "Autumn or Winter.");
+                    "Autumn, Winter or Seasonless.");
             }
 
             if (hpCapacity <= 0)
@@ -162,6 +162,10 @@ namespace GardenGambit.Domain.Combat
 
         public bool IsWinter =>
             Season == CombatCardSeason.Winter;
+
+        public bool IsSeasonless =>
+            Season ==
+            CombatCardSeason.Seasonless;
 
         public int HpCapacity
         {
@@ -458,13 +462,13 @@ namespace GardenGambit.Domain.Combat
             CurrentHp <= 0;
 
         private static bool IsValidSeason(
-            CombatCardSeason season)
+           CombatCardSeason season)
         {
             return
                 season >=
                     CombatCardSeason.Unspecified &&
                 season <=
-                    CombatCardSeason.Winter;
+                    CombatCardSeason.Seasonless;
         }
     }
 }

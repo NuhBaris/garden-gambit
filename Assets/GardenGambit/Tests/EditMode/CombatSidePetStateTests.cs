@@ -8,6 +8,14 @@ namespace GardenGambit.Tests.EditMode
     public sealed class CombatSidePetStateTests
     {
         [Test]
+        public void MaximumPetCount_IsTwo()
+        {
+            Assert.That(
+                CombatSidePetState.MaximumPetCount,
+                Is.EqualTo(2));
+        }
+
+        [Test]
         public void Constructor_WithPlayerSide_SetsValues()
         {
             var registry =
@@ -75,6 +83,34 @@ namespace GardenGambit.Tests.EditMode
                     new CombatSidePetState(
                         CombatSide.Player,
                         null));
+        }
+
+        [Test]
+        public void
+            Constructor_WithMoreThanMaximumPets_Throws()
+        {
+            var registry =
+                new CombatPetRegistry(
+                    new[]
+                    {
+                        CreatePet(
+                            "pet-first",
+                            100),
+
+                        CreatePet(
+                            "pet-second",
+                            200),
+
+                        CreatePet(
+                            "pet-third",
+                            300)
+                    });
+
+            Assert.Throws<ArgumentException>(
+                () => _ =
+                    new CombatSidePetState(
+                        CombatSide.Player,
+                        registry));
         }
 
         [Test]
@@ -187,6 +223,118 @@ namespace GardenGambit.Tests.EditMode
 
             Assert.Throws<ArgumentException>(
                 () => sideState.GetSourceOrder(
+                    new InstanceId(999)));
+        }
+
+        [Test]
+        public void
+            GetAffectedRowAt_WithUpperPet_ReturnsFront()
+        {
+            var sideState =
+                new CombatSidePetState(
+                    CombatSide.Player,
+                    CreateRegistry());
+
+            var affectedRow =
+                sideState.GetAffectedRowAt(
+                    CombatSidePetState
+                        .UpperPetSourceOrder);
+
+            Assert.That(
+                affectedRow,
+                Is.EqualTo(
+                    BoardRow.Front));
+        }
+
+        [Test]
+        public void
+            GetAffectedRowAt_WithLowerPet_ReturnsBack()
+        {
+            var sideState =
+                new CombatSidePetState(
+                    CombatSide.Player,
+                    CreateRegistry());
+
+            var affectedRow =
+                sideState.GetAffectedRowAt(
+                    CombatSidePetState
+                        .LowerPetSourceOrder);
+
+            Assert.That(
+                affectedRow,
+                Is.EqualTo(
+                    BoardRow.Back));
+        }
+
+        [Test]
+        public void
+            GetAffectedRowAt_WithMissingPetOrder_Throws()
+        {
+            var sideState =
+                new CombatSidePetState(
+                    CombatSide.Player,
+                    CreateRegistry());
+
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => sideState.GetAffectedRowAt(
+                    sideState.Count));
+        }
+
+        [Test]
+        public void
+            GetAffectedRow_WithUpperPet_ReturnsFront()
+        {
+            var registry =
+                CreateRegistry();
+
+            var sideState =
+                new CombatSidePetState(
+                    CombatSide.Player,
+                    registry);
+
+            var affectedRow =
+                sideState.GetAffectedRow(
+                    registry.Pets[0].InstanceId);
+
+            Assert.That(
+                affectedRow,
+                Is.EqualTo(
+                    BoardRow.Front));
+        }
+
+        [Test]
+        public void
+            GetAffectedRow_WithLowerPet_ReturnsBack()
+        {
+            var registry =
+                CreateRegistry();
+
+            var sideState =
+                new CombatSidePetState(
+                    CombatSide.Player,
+                    registry);
+
+            var affectedRow =
+                sideState.GetAffectedRow(
+                    registry.Pets[1].InstanceId);
+
+            Assert.That(
+                affectedRow,
+                Is.EqualTo(
+                    BoardRow.Back));
+        }
+
+        [Test]
+        public void
+            GetAffectedRow_WithPetNotOwnedBySide_Throws()
+        {
+            var sideState =
+                new CombatSidePetState(
+                    CombatSide.Player,
+                    CreateRegistry());
+
+            Assert.Throws<ArgumentException>(
+                () => sideState.GetAffectedRow(
                     new InstanceId(999)));
         }
 

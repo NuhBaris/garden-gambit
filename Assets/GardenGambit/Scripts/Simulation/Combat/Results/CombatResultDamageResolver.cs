@@ -11,10 +11,32 @@ namespace GardenGambit.Simulation.Combat
             _contributionResolver;
 
         public CombatResultDamageResolver()
+            : this(
+                new
+                    CombatFinalRankModifierRegistry())
         {
-            _contributionResolver =
-                new CombatSideResultContributionResolver();
         }
+
+        public CombatResultDamageResolver(
+            CombatFinalRankModifierRegistry
+                finalRankModifierRegistry)
+        {
+            if (finalRankModifierRegistry == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(finalRankModifierRegistry));
+            }
+
+            _contributionResolver =
+                new
+                    CombatSideResultContributionResolver(
+                        finalRankModifierRegistry);
+        }
+
+        public CombatFinalRankModifierRegistry
+            FinalRankModifierRegistry =>
+                _contributionResolver
+                    .FinalRankModifierRegistry;
 
         public CombatResultDamageCalculation Resolve(
             CombatState state)
@@ -25,21 +47,15 @@ namespace GardenGambit.Simulation.Combat
                     nameof(state));
             }
 
-            var playerSide =
-                state.GetSide(
-                    CombatSide.Player);
-
-            var enemySide =
-                state.GetSide(
-                    CombatSide.Enemy);
-
             var playerContribution =
                 _contributionResolver.Resolve(
-                    playerSide);
+                    state.GetSide(
+                        CombatSide.Player));
 
             var enemyContribution =
                 _contributionResolver.Resolve(
-                    enemySide);
+                    state.GetSide(
+                        CombatSide.Enemy));
 
             return new CombatResultDamageCalculation(
                 playerContribution,

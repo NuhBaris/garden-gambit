@@ -69,6 +69,14 @@ namespace GardenGambit.Simulation.Combat
                 return false;
             }
 
+            if (context.SourceEvent
+                    .TargetPosition.Row !=
+                context.GetAffectedRow(
+                    pet))
+            {
+                return false;
+            }
+
             if (!context.SourceEvent.IsWinterTarget)
             {
                 return false;
@@ -87,6 +95,14 @@ namespace GardenGambit.Simulation.Combat
         {
             if (context.SourceEvent.TargetSide !=
                 context.Side)
+            {
+                return;
+            }
+
+            if (context.SourceEvent
+                    .TargetPosition.Row !=
+                context.GetAffectedRow(
+                    pet))
             {
                 return;
             }

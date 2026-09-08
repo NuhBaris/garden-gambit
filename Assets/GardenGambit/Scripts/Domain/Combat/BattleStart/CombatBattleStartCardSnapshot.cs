@@ -101,6 +101,10 @@ namespace GardenGambit.Domain.Combat
         public bool IsWinter =>
             Season == CombatCardSeason.Winter;
 
+        public bool IsSeasonless =>
+            Season ==
+            CombatCardSeason.Seasonless;
+
         public int HpCapacity
         {
             get;

@@ -69,6 +69,14 @@ namespace GardenGambit.Simulation.Combat
                 return false;
             }
 
+            if (context.SourceEvent
+                    .AttackerPosition.Row !=
+                context.GetAffectedRow(
+                    pet))
+            {
+                return false;
+            }
+
             if (!context.SourceEvent.IsSummerAttack)
             {
                 return false;
@@ -87,6 +95,14 @@ namespace GardenGambit.Simulation.Combat
         {
             if (context.SourceEvent.AttackerSide !=
                 context.Side)
+            {
+                return;
+            }
+
+            if (context.SourceEvent
+                    .AttackerPosition.Row !=
+                context.GetAffectedRow(
+                    pet))
             {
                 return;
             }

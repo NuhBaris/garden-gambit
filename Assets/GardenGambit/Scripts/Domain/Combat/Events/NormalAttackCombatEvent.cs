@@ -189,6 +189,10 @@ namespace GardenGambit.Domain.Combat
             AttackerSeason ==
             CombatCardSeason.Winter;
 
+        public bool IsSeasonlessAttack =>
+            AttackerSeason ==
+            CombatCardSeason.Seasonless;
+
         public InstanceId TargetInstanceId
         {
             get;
@@ -226,6 +230,10 @@ namespace GardenGambit.Domain.Combat
         public bool IsWinterTarget =>
             TargetSeason ==
             CombatCardSeason.Winter;
+
+        public bool IsSeasonlessTarget =>
+             TargetSeason ==
+             CombatCardSeason.Seasonless;
 
         public int BaseDamage
         {
@@ -267,7 +275,7 @@ namespace GardenGambit.Domain.Combat
             if (season >=
                     CombatCardSeason.Unspecified &&
                 season <=
-                    CombatCardSeason.Winter)
+                    CombatCardSeason.Seasonless)
             {
                 return;
             }
@@ -276,8 +284,8 @@ namespace GardenGambit.Domain.Combat
                 parameterName,
                 season,
                 "Normal Attack card season must be " +
-                "Unspecified, Spring, Summer, Autumn " +
-                "or Winter.");
+                "Unspecified, Spring, Summer, Autumn, " +
+                "Winter or Seasonless.");
         }
     }
 }

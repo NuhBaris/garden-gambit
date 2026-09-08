@@ -336,7 +336,7 @@ namespace GardenGambit.Tests.EditMode
 
         [Test]
         public void
-            Resolve_WithTwoSunBirds_AllowsOneBonusPerPetForSameCard()
+    Resolve_WithTwoSunBirds_OnlyUpperPetAffectsFrontCard()
         {
             var firstPet =
                 CreatePet(
@@ -398,7 +398,7 @@ namespace GardenGambit.Tests.EditMode
                 secondHandler.CanTrigger(
                     state,
                     attackEvent),
-                Is.True);
+                Is.False);
 
             firstHandler.Resolve(
                 state,
@@ -411,7 +411,7 @@ namespace GardenGambit.Tests.EditMode
             Assert.That(
                 modifierRegistry.GetTotalModifier(
                     attackEvent.Metadata.EventId),
-                Is.EqualTo(2));
+                Is.EqualTo(1));
 
             Assert.That(
                 usageCommitter.HasTriggered(
@@ -423,7 +423,7 @@ namespace GardenGambit.Tests.EditMode
                 usageCommitter.HasTriggered(
                     secondPet.InstanceId,
                     attackEvent.AttackerInstanceId),
-                Is.True);
+                Is.False);
         }
 
         [Test]

@@ -12,7 +12,9 @@ namespace GardenGambit.Simulation.Combat
                 new
                     CombatNormalAttackSourceDamageModifierRegistry(),
                 new
-                    CombatNormalAttackTargetDamageReductionRegistry())
+                    CombatNormalAttackTargetDamageReductionRegistry(),
+                new
+                    CombatFinalRankModifierRegistry())
         {
         }
 
@@ -25,7 +27,9 @@ namespace GardenGambit.Simulation.Combat
                 usageRegistry,
                 sourceDamageModifierRegistry,
                 new
-                    CombatNormalAttackTargetDamageReductionRegistry())
+                    CombatNormalAttackTargetDamageReductionRegistry(),
+                new
+                    CombatFinalRankModifierRegistry())
         {
         }
 
@@ -36,6 +40,24 @@ namespace GardenGambit.Simulation.Combat
                 sourceDamageModifierRegistry,
             CombatNormalAttackTargetDamageReductionRegistry
                 targetDamageReductionRegistry)
+            : this(
+                usageRegistry,
+                sourceDamageModifierRegistry,
+                targetDamageReductionRegistry,
+                new
+                    CombatFinalRankModifierRegistry())
+        {
+        }
+
+        public CombatPetTriggerRuntime(
+            CombatPetCardTriggerUsageRegistry
+                usageRegistry,
+            CombatNormalAttackSourceDamageModifierRegistry
+                sourceDamageModifierRegistry,
+            CombatNormalAttackTargetDamageReductionRegistry
+                targetDamageReductionRegistry,
+            CombatFinalRankModifierRegistry
+                finalRankModifierRegistry)
         {
             if (usageRegistry == null)
             {
@@ -57,6 +79,13 @@ namespace GardenGambit.Simulation.Combat
                         targetDamageReductionRegistry));
             }
 
+            if (finalRankModifierRegistry == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(
+                        finalRankModifierRegistry));
+            }
+
             UsageRegistry =
                 usageRegistry;
 
@@ -65,6 +94,9 @@ namespace GardenGambit.Simulation.Combat
 
             TargetDamageReductionRegistry =
                 targetDamageReductionRegistry;
+
+            FinalRankModifierRegistry =
+                finalRankModifierRegistry;
 
             UsageCommitter =
                 new
@@ -82,7 +114,8 @@ namespace GardenGambit.Simulation.Combat
                     CombatPetTriggerSourceFactoryCatalog(
                         UsageCommitter,
                         sourceDamageModifierRegistry,
-                        targetDamageReductionRegistry);
+                        targetDamageReductionRegistry,
+                        finalRankModifierRegistry);
 
             FactoryRegistry =
                 FactoryCatalog.CreateRegistry();
@@ -125,6 +158,12 @@ namespace GardenGambit.Simulation.Combat
             get;
         }
 
+        public CombatFinalRankModifierRegistry
+            FinalRankModifierRegistry
+        {
+            get;
+        }
+
         public CombatPetTriggerSourceFactoryCatalog
             FactoryCatalog
         {
@@ -155,6 +194,54 @@ namespace GardenGambit.Simulation.Combat
 
             return SourceBuilder.BuildRegistry(
                 state);
+        }
+
+        public CombatResolutionRunner
+            CreateResolutionRunner(
+                CombatState state,
+                CombatEventMetadataFactory
+                    metadataFactory,
+                CombatEventLog eventLog,
+                CombatEventQueue eventQueue)
+        {
+            if (state == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(state));
+            }
+
+            if (metadataFactory == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(metadataFactory));
+            }
+
+            if (eventLog == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(eventLog));
+            }
+
+            if (eventQueue == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(eventQueue));
+            }
+
+            var sourceRegistry =
+                BuildSourceRegistry(
+                    state);
+
+            return new CombatResolutionRunner(
+                state,
+                metadataFactory,
+                eventLog,
+                eventQueue,
+                sourceRegistry,
+                SourceDamageModifierRegistry,
+                TargetDamageReductionResolver,
+                FinalRankModifierRegistry,
+                useStagedNormalAttackByDefault: true);
         }
     }
 }

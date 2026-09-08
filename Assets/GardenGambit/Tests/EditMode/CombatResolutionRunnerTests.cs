@@ -263,7 +263,7 @@ namespace GardenGambit.Tests.EditMode
 
             Assert.That(
                 environment.EventLog.Count,
-                Is.EqualTo(11));
+                Is.EqualTo(12));
 
             Assert.That(
                 environment.EventLog.Events[
@@ -358,7 +358,7 @@ namespace GardenGambit.Tests.EditMode
 
             Assert.That(
                 environment.EventLog.Count,
-                Is.EqualTo(12));
+                Is.EqualTo(13));
 
             var resultEvent =
                 GetSingleResultEvent(

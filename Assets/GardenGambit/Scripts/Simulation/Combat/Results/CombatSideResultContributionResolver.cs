@@ -10,11 +10,39 @@ namespace GardenGambit.Simulation.Combat
             WarBannerAttackMultiplierResolver
             _warBannerAttackMultiplierResolver;
 
+        private readonly
+            CombatFinalRankContributionResolver
+            _finalRankContributionResolver;
+
         public CombatSideResultContributionResolver()
+            : this(
+                new
+                    CombatFinalRankModifierRegistry())
         {
+        }
+
+        public CombatSideResultContributionResolver(
+            CombatFinalRankModifierRegistry
+                finalRankModifierRegistry)
+        {
+            if (finalRankModifierRegistry == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(finalRankModifierRegistry));
+            }
+
             _warBannerAttackMultiplierResolver =
                 new WarBannerAttackMultiplierResolver();
+
+            _finalRankContributionResolver =
+                new CombatFinalRankContributionResolver(
+                    finalRankModifierRegistry);
         }
+
+        public CombatFinalRankModifierRegistry
+            FinalRankModifierRegistry =>
+                _finalRankContributionResolver
+                    .ModifierRegistry;
 
         public CombatSideResultContribution Resolve(
             CombatSideState sideState)
@@ -25,7 +53,8 @@ namespace GardenGambit.Simulation.Combat
                     nameof(sideState));
             }
 
-            var survivorCount = 0;
+            var survivorCount =
+                0;
 
             var totalSurvivorRankContribution =
                 0;
@@ -49,6 +78,11 @@ namespace GardenGambit.Simulation.Combat
                     continue;
                 }
 
+                var finalRankContribution =
+                    _finalRankContributionResolver
+                        .Resolve(
+                            card);
+
                 survivorCount =
                     checked(
                         survivorCount + 1);
@@ -56,7 +90,7 @@ namespace GardenGambit.Simulation.Combat
                 totalSurvivorRankContribution =
                     checked(
                         totalSurvivorRankContribution +
-                        card.Rank.Value);
+                        finalRankContribution);
             }
 
             var finalAttackMultiplier =

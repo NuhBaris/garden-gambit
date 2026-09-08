@@ -10,6 +10,9 @@ namespace GardenGambit.Domain.Combat
         public const string PolarFerretValue =
             "pet.polar_ferret";
 
+        public const string MuskCatValue =
+            "pet.musk_cat";
+
         public static DefinitionId SunBird =>
             new DefinitionId(
                 SunBirdValue);
@@ -17,5 +20,9 @@ namespace GardenGambit.Domain.Combat
         public static DefinitionId PolarFerret =>
             new DefinitionId(
                 PolarFerretValue);
+
+        public static DefinitionId MuskCat =>
+            new DefinitionId(
+                MuskCatValue);
     }
 }

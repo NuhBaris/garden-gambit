@@ -21,6 +21,9 @@ namespace GardenGambit.Simulation.Combat
         private bool
             _altarResolutionCompleted;
 
+        private bool
+            _useStagedAltarResolution;
+
         private int
             _resolvedActivationCount;
 
@@ -78,6 +81,10 @@ namespace GardenGambit.Simulation.Combat
             ActiveSlotStageEvent =>
                 _activeSlotStageEvent;
 
+        public bool UsesStagedAltarResolution =>
+            HasActiveSlotStage &&
+            _useStagedAltarResolution;
+
         public bool HasActiveAltarResolution =>
             _altarRunner.HasActiveResolution;
 
@@ -92,6 +99,17 @@ namespace GardenGambit.Simulation.Combat
 
         public CombatEvent ActiveAltarEvent =>
             _altarRunner.ActiveAltarEvent;
+
+        public bool HasStagedAltarExecution =>
+            _altarRunner.HasStagedExecution;
+
+        public CombatAltarActivationExecutionState
+            ActiveAltarExecutionState =>
+                _altarRunner.ActiveExecutionState;
+
+        public CombatAltarActivationExecutionStage
+            ActiveAltarExecutionStage =>
+                _altarRunner.ActiveExecutionStage;
 
         public CombatSide? NextSide =>
             _altarRunner.NextSide;
@@ -125,44 +143,27 @@ namespace GardenGambit.Simulation.Combat
             int maximumEventCountPerPass,
             int maximumTriggerCountPerEvent)
         {
-            if (combatStartedEvent == null)
-            {
-                throw new ArgumentNullException(
-                    nameof(combatStartedEvent));
-            }
-
-            ValidateBudgets(
-                maximumPassCountPerAltar,
-                maximumEventCountPerPass,
-                maximumTriggerCountPerEvent);
-
-            if (_activeSlotStageEvent != null)
-            {
-                throw new InvalidOperationException(
-                    "The active Slot battle-start stage " +
-                    "must be completed before another " +
-                    "Slot stage can start.");
-            }
-
-            var slotStageEvent =
-                _stageResolver.StartStage(
-                    combatStartedEvent,
-                    CombatBattleStartStage.Slot);
-
-            _activeSlotStageEvent =
-                slotStageEvent;
-
-            _altarResolutionCompleted =
-                false;
-
-            _resolvedActivationCount =
-                0;
-
-            return StartAltarResolution(
+            return StartAndResolveSlotStageCore(
                 combatStartedEvent,
                 maximumPassCountPerAltar,
                 maximumEventCountPerPass,
-                maximumTriggerCountPerEvent);
+                maximumTriggerCountPerEvent,
+                useStagedAltarResolution: false);
+        }
+
+        public int StartAndResolveSlotStageStaged(
+            CombatStartedCombatEvent
+                combatStartedEvent,
+            int maximumPassCountPerAltar,
+            int maximumEventCountPerPass,
+            int maximumTriggerCountPerEvent)
+        {
+            return StartAndResolveSlotStageCore(
+                combatStartedEvent,
+                maximumPassCountPerAltar,
+                maximumEventCountPerPass,
+                maximumTriggerCountPerEvent,
+                useStagedAltarResolution: true);
         }
 
         public int ResumeActiveSlotStage(
@@ -207,6 +208,57 @@ namespace GardenGambit.Simulation.Combat
                 maximumTriggerCountPerEvent);
         }
 
+        private int StartAndResolveSlotStageCore(
+            CombatStartedCombatEvent
+                combatStartedEvent,
+            int maximumPassCountPerAltar,
+            int maximumEventCountPerPass,
+            int maximumTriggerCountPerEvent,
+            bool useStagedAltarResolution)
+        {
+            if (combatStartedEvent == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(combatStartedEvent));
+            }
+
+            ValidateBudgets(
+                maximumPassCountPerAltar,
+                maximumEventCountPerPass,
+                maximumTriggerCountPerEvent);
+
+            if (_activeSlotStageEvent != null)
+            {
+                throw new InvalidOperationException(
+                    "The active Slot battle-start stage " +
+                    "must be completed before another " +
+                    "Slot stage can start.");
+            }
+
+            var slotStageEvent =
+                _stageResolver.StartStage(
+                    combatStartedEvent,
+                    CombatBattleStartStage.Slot);
+
+            _activeSlotStageEvent =
+                slotStageEvent;
+
+            _altarResolutionCompleted =
+                false;
+
+            _resolvedActivationCount =
+                0;
+
+            _useStagedAltarResolution =
+                useStagedAltarResolution;
+
+            return StartAltarResolution(
+                combatStartedEvent,
+                maximumPassCountPerAltar,
+                maximumEventCountPerPass,
+                maximumTriggerCountPerEvent);
+        }
+
         private int StartAltarResolution(
             CombatStartedCombatEvent
                 combatStartedEvent,
@@ -214,12 +266,26 @@ namespace GardenGambit.Simulation.Combat
             int maximumEventCountPerPass,
             int maximumTriggerCountPerEvent)
         {
-            _resolvedActivationCount =
-                _altarRunner.StartAndResolveAllAltars(
-                    combatStartedEvent,
-                    maximumPassCountPerAltar,
-                    maximumEventCountPerPass,
-                    maximumTriggerCountPerEvent);
+            if (_useStagedAltarResolution)
+            {
+                _resolvedActivationCount =
+                    _altarRunner
+                        .StartAndResolveAllAltarsStaged(
+                            combatStartedEvent,
+                            maximumPassCountPerAltar,
+                            maximumEventCountPerPass,
+                            maximumTriggerCountPerEvent);
+            }
+            else
+            {
+                _resolvedActivationCount =
+                    _altarRunner
+                        .StartAndResolveAllAltars(
+                            combatStartedEvent,
+                            maximumPassCountPerAltar,
+                            maximumEventCountPerPass,
+                            maximumTriggerCountPerEvent);
+            }
 
             _altarResolutionCompleted =
                 true;
@@ -258,6 +324,9 @@ namespace GardenGambit.Simulation.Combat
 
             _resolvedActivationCount =
                 0;
+
+            _useStagedAltarResolution =
+                false;
         }
 
         private static void ValidateBudgets(

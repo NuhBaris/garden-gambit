@@ -119,7 +119,7 @@ namespace GardenGambit.Tests.EditMode
 
             Assert.That(
                 registry.Count,
-                Is.EqualTo(2));
+                Is.EqualTo(3));
 
             Assert.That(
                 registry.Contains(
@@ -211,11 +211,11 @@ namespace GardenGambit.Tests.EditMode
 
             Assert.That(
                 firstRegistry.Count,
-                Is.EqualTo(2));
+                Is.EqualTo(3));
 
             Assert.That(
                 secondRegistry.Count,
-                Is.EqualTo(2));
+                Is.EqualTo(3));
 
             var firstFactory =
                 firstRegistry.Factories[0]

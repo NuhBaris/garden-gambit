@@ -22,6 +22,19 @@ namespace GardenGambit.Simulation.Combat
         public CombatResultCalculationResolver(
             CombatEventMetadataFactory metadataFactory,
             CombatEventLog eventLog)
+            : this(
+                metadataFactory,
+                eventLog,
+                new
+                    CombatFinalRankModifierRegistry())
+        {
+        }
+
+        public CombatResultCalculationResolver(
+            CombatEventMetadataFactory metadataFactory,
+            CombatEventLog eventLog,
+            CombatFinalRankModifierRegistry
+                finalRankModifierRegistry)
         {
             if (metadataFactory == null)
             {
@@ -35,6 +48,12 @@ namespace GardenGambit.Simulation.Combat
                     nameof(eventLog));
             }
 
+            if (finalRankModifierRegistry == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(finalRankModifierRegistry));
+            }
+
             _metadataFactory =
                 metadataFactory;
 
@@ -42,12 +61,18 @@ namespace GardenGambit.Simulation.Combat
                 eventLog;
 
             _damageResolver =
-                new CombatResultDamageResolver();
+                new CombatResultDamageResolver(
+                    finalRankModifierRegistry);
 
             _resolutionResolver =
-                new CombatResultDamageResolutionResolver();
-
+                new
+                    CombatResultDamageResolutionResolver();
         }
+
+        public CombatFinalRankModifierRegistry
+            FinalRankModifierRegistry =>
+                _damageResolver
+                    .FinalRankModifierRegistry;
 
         public CombatResultCalculatedCombatEvent
             Resolve(
@@ -74,8 +99,8 @@ namespace GardenGambit.Simulation.Combat
                 combatStartedEvent);
 
             var calculation =
-    _damageResolver.Resolve(
-        state);
+                _damageResolver.Resolve(
+                    state);
 
             var resolution =
                 _resolutionResolver.Resolve(

@@ -394,7 +394,8 @@ namespace GardenGambit.Tests.EditMode
         }
 
         [Test]
-        public void Resolve_WithTwoPolarFerrets_RegistersOneRequestPerPet()
+        public void
+    Resolve_WithTwoPolarFerrets_OnlyUpperPetRegistersForFrontTarget()
         {
             var firstPet =
                 CreatePet(
@@ -457,7 +458,7 @@ namespace GardenGambit.Tests.EditMode
                 secondHandler.CanTrigger(
                     state,
                     attackEvent),
-                Is.True);
+                Is.False);
 
             firstHandler.Resolve(
                 state,
@@ -473,17 +474,12 @@ namespace GardenGambit.Tests.EditMode
 
             Assert.That(
                 requests.Count,
-                Is.EqualTo(2));
+                Is.EqualTo(1));
 
             Assert.That(
                 requests[0].PetInstanceId,
                 Is.EqualTo(
                     firstPet.InstanceId));
-
-            Assert.That(
-                requests[1].PetInstanceId,
-                Is.EqualTo(
-                    secondPet.InstanceId));
 
             Assert.That(
                 usageCommitter.HasTriggered(

@@ -138,7 +138,7 @@ namespace GardenGambit.Tests.EditMode
                 ArgumentOutOfRangeException>(
                 () => _ =
                     CreateEvent(
-                        (CombatCardSeason)5));
+                        (CombatCardSeason)6));
         }
 
         private static NormalAttackCombatEvent CreateEvent(

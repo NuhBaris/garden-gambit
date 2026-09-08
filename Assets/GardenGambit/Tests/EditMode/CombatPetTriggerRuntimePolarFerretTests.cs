@@ -35,7 +35,7 @@ namespace GardenGambit.Tests.EditMode
 
             Assert.That(
                 runtime.FactoryRegistry.Count,
-                Is.EqualTo(2));
+                Is.EqualTo(3));
 
             Assert.That(
                 runtime.FactoryRegistry.Contains(

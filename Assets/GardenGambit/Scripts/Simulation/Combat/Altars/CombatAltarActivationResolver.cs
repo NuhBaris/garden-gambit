@@ -19,6 +19,9 @@ namespace GardenGambit.Simulation.Combat
         private readonly CombatAltarTransferApplier
             _transferApplier;
 
+        private readonly CombatHpGainResolver
+            _hpGainResolver;
+
         private readonly CombatDeathEventResolver
             _deathEventResolver;
 
@@ -51,6 +54,11 @@ namespace GardenGambit.Simulation.Combat
             _transferApplier =
                 new CombatAltarTransferApplier();
 
+            _hpGainResolver =
+                new CombatHpGainResolver(
+                    metadataFactory,
+                    eventLog);
+
             _deathEventResolver =
                 new CombatDeathEventResolver(
                     metadataFactory,
@@ -62,6 +70,140 @@ namespace GardenGambit.Simulation.Combat
             CombatStartedCombatEvent
                 combatStartedEvent,
             BoardPosition donorPosition)
+        {
+            CombatEvent altarEvent;
+
+            CombatAltarTransferApplicationPreview
+                preview;
+
+            var wasPrepared =
+                TryPrepareActivation(
+                    state,
+                    combatStartedEvent,
+                    donorPosition,
+                    out altarEvent,
+                    out preview);
+
+            if (!wasPrepared)
+            {
+                return null;
+            }
+
+            _transferApplier.Apply(
+                preview);
+
+            _eventLog.Append(
+                altarEvent);
+
+            _deathEventResolver.AppendFromAltar(
+                altarEvent);
+
+            return altarEvent;
+        }
+
+        public CombatAltarActivationExecutionState
+            TryStartActivation(
+                CombatState state,
+                CombatStartedCombatEvent
+                    combatStartedEvent,
+                BoardPosition donorPosition)
+        {
+            CombatEvent altarEvent;
+
+            CombatAltarTransferApplicationPreview
+                preview;
+
+            var wasPrepared =
+                TryPrepareActivation(
+                    state,
+                    combatStartedEvent,
+                    donorPosition,
+                    out altarEvent,
+                    out preview);
+
+            if (!wasPrepared)
+            {
+                return null;
+            }
+
+            _transferApplier
+                .EnsureCanApplyRecipientTransfer(
+                    preview);
+
+            _eventLog.Append(
+                altarEvent);
+
+            if (preview.IsSacrificialAltar)
+            {
+                var hpGainEvent =
+                    _hpGainResolver
+                        .TryApplyHpStatGain(
+                            state,
+                            altarEvent,
+                            preview.RecipientPosition,
+                            preview.TransferAmount);
+
+                if (hpGainEvent == null)
+                {
+                    throw new InvalidOperationException(
+                        "Sacrificial Altar transfer must " +
+                        "produce an HP Gain event.");
+                }
+            }
+            else
+            {
+                _transferApplier
+                    .ApplyWarRecipientTransfer(
+                        preview);
+            }
+
+            return new
+                CombatAltarActivationExecutionState(
+                    altarEvent,
+                    preview);
+        }
+
+        public DeathCombatEvent StartDonorDeath(
+            CombatAltarActivationExecutionState
+                executionState)
+        {
+            if (executionState == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(executionState));
+            }
+
+            if (executionState.Stage !=
+                CombatAltarActivationExecutionStage
+                    .TransferTriggersResolved)
+            {
+                throw new InvalidOperationException(
+                    "Altar donor death can only start " +
+                    "after transfer triggers have been " +
+                    "resolved.");
+            }
+
+            _transferApplier
+                .ApplyDonorDeathThreshold(
+                    executionState.TransferPreview);
+
+            var deathEvent =
+                _deathEventResolver.AppendFromAltar(
+                    executionState.AltarEvent);
+
+            executionState.MarkDonorDeathStarted();
+
+            return deathEvent;
+        }
+
+        private bool TryPrepareActivation(
+            CombatState state,
+            CombatStartedCombatEvent
+                combatStartedEvent,
+            BoardPosition donorPosition,
+            out CombatEvent altarEvent,
+            out CombatAltarTransferApplicationPreview
+                preview)
         {
             if (state == null)
             {
@@ -97,7 +239,13 @@ namespace GardenGambit.Simulation.Combat
 
             if (context == null)
             {
-                return null;
+                altarEvent =
+                    null;
+
+                preview =
+                    null;
+
+                return false;
             }
 
             EnsureActivationNotAlreadyLogged(
@@ -108,11 +256,12 @@ namespace GardenGambit.Simulation.Combat
                 new CombatAltarTransferSnapshot(
                     context);
 
-            var preview =
-                new CombatAltarTransferApplicationPreview(
-                    snapshot);
+            preview =
+                new
+                    CombatAltarTransferApplicationPreview(
+                        snapshot);
 
-            var altarEvent =
+            altarEvent =
                 _eventFactory.Create(
                     combatStartedEvent,
                     snapshot);
@@ -120,16 +269,7 @@ namespace GardenGambit.Simulation.Combat
             EnsureMetadataCanBeAppended(
                 altarEvent.Metadata);
 
-            _transferApplier.Apply(
-                preview);
-
-            _eventLog.Append(
-                altarEvent);
-
-            _deathEventResolver.AppendFromAltar(
-                altarEvent);
-
-            return altarEvent;
+            return true;
         }
 
         private void ValidateLoggedCombatStartedEvent(

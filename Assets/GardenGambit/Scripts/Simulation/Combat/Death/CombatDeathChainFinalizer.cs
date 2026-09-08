@@ -14,6 +14,10 @@ namespace GardenGambit.Simulation.Combat
         private readonly CombatDeathChainCompletionResolver
             _completionResolver;
 
+        private readonly
+            CombatPostChainAdvancementResolver
+            _advancementResolver;
+
         private int _scannedEventCount;
 
         public CombatDeathChainFinalizer(
@@ -39,11 +43,19 @@ namespace GardenGambit.Simulation.Combat
                     nameof(eventQueue));
             }
 
-            _eventLog = eventLog;
-            _eventQueue = eventQueue;
+            _eventLog =
+                eventLog;
+
+            _eventQueue =
+                eventQueue;
 
             _completionResolver =
                 new CombatDeathChainCompletionResolver(
+                    metadataFactory,
+                    eventLog);
+
+            _advancementResolver =
+                new CombatPostChainAdvancementResolver(
                     metadataFactory,
                     eventLog);
         }
@@ -83,7 +95,8 @@ namespace GardenGambit.Simulation.Combat
                         _scannedEventCount];
 
                 var deathEvent =
-                    combatEvent as DeathCombatEvent;
+                    combatEvent
+                        as DeathCombatEvent;
 
                 if (deathEvent != null)
                 {
@@ -92,15 +105,86 @@ namespace GardenGambit.Simulation.Combat
                             state,
                             deathEvent);
 
-                    completedDeathChainCount = checked(
-                        completedDeathChainCount + 1);
+                    completedDeathChainCount =
+                        checked(
+                            completedDeathChainCount +
+                            1);
+                }
+                else
+                {
+                    var directDeleteEvent =
+                        combatEvent
+                            as DirectDeleteCombatEvent;
+
+                    if (directDeleteEvent != null)
+                    {
+                        CompleteDirectDeleteChain(
+                            state,
+                            directDeleteEvent);
+                    }
                 }
 
-                _scannedEventCount = checked(
-                    _scannedEventCount + 1);
+                _scannedEventCount =
+                    checked(
+                        _scannedEventCount +
+                        1);
             }
 
             return completedDeathChainCount;
+        }
+
+        private void CompleteDirectDeleteChain(
+            CombatState state,
+            DirectDeleteCombatEvent
+                directDeleteEvent)
+        {
+            if (HasAdvancementFor(
+                    directDeleteEvent))
+            {
+                return;
+            }
+
+            _advancementResolver
+                .TryAdvanceAfterChain(
+                    state,
+                    directDeleteEvent);
+        }
+
+        private bool HasAdvancementFor(
+            DirectDeleteCombatEvent
+                directDeleteEvent)
+        {
+            for (var index = 0;
+                 index < _eventLog.Count;
+                 index++)
+            {
+                var advancementEvent =
+                    _eventLog.Events[index]
+                        as CardAdvancedCombatEvent;
+
+                if (advancementEvent == null)
+                {
+                    continue;
+                }
+
+                if (!advancementEvent.Metadata
+                        .HasParent)
+                {
+                    continue;
+                }
+
+                if (advancementEvent.Metadata
+                        .ParentEventId.Value !=
+                    directDeleteEvent.Metadata
+                        .EventId)
+                {
+                    continue;
+                }
+
+                return true;
+            }
+
+            return false;
         }
     }
 }

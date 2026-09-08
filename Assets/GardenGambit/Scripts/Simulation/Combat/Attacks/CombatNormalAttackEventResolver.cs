@@ -330,7 +330,7 @@ namespace GardenGambit.Simulation.Combat
             if (season <
                     CombatCardSeason.Unspecified ||
                 season >
-                    CombatCardSeason.Winter)
+                    CombatCardSeason.Seasonless)
             {
                 throw new ArgumentOutOfRangeException(
                     parameterName,

@@ -19,7 +19,7 @@ namespace GardenGambit.Tests.EditMode
 
             Assert.That(
                 registry.Count,
-                Is.EqualTo(2));
+                Is.EqualTo(3));
 
             Assert.That(
                 registry.Contains(

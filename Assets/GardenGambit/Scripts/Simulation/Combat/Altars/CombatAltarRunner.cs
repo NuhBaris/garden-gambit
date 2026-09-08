@@ -22,6 +22,9 @@ namespace GardenGambit.Simulation.Combat
         private int
             _resolvedActivationCount;
 
+        private bool
+            _useStagedActivationChain;
+
         public CombatAltarRunner(
             CombatState state,
             CombatEventMetadataFactory metadataFactory,
@@ -70,6 +73,10 @@ namespace GardenGambit.Simulation.Combat
             ActiveCombatStartedEvent =>
                 _activeCombatStartedEvent;
 
+        public bool UsesStagedActivationChain =>
+            HasActiveResolution &&
+            _useStagedActivationChain;
+
         public bool HasActiveSide =>
             _sideRunner.HasActiveSide;
 
@@ -81,6 +88,17 @@ namespace GardenGambit.Simulation.Combat
 
         public CombatEvent ActiveAltarEvent =>
             _sideRunner.ActiveAltarEvent;
+
+        public bool HasStagedExecution =>
+            _sideRunner.HasStagedExecution;
+
+        public CombatAltarActivationExecutionState
+            ActiveExecutionState =>
+                _sideRunner.ActiveExecutionState;
+
+        public CombatAltarActivationExecutionStage
+            ActiveExecutionStage =>
+                _sideRunner.ActiveExecutionStage;
 
         public bool HasPendingEventResolution =>
             _sideRunner.HasPendingResolution;
@@ -115,6 +133,60 @@ namespace GardenGambit.Simulation.Combat
             int maximumEventCountPerPass,
             int maximumTriggerCountPerEvent)
         {
+            return StartAndResolveAllAltarsCore(
+                combatStartedEvent,
+                maximumPassCountPerAltar,
+                maximumEventCountPerPass,
+                maximumTriggerCountPerEvent,
+                useStagedActivationChain: false);
+        }
+
+        public int StartAndResolveAllAltarsStaged(
+            CombatStartedCombatEvent
+                combatStartedEvent,
+            int maximumPassCountPerAltar,
+            int maximumEventCountPerPass,
+            int maximumTriggerCountPerEvent)
+        {
+            return StartAndResolveAllAltarsCore(
+                combatStartedEvent,
+                maximumPassCountPerAltar,
+                maximumEventCountPerPass,
+                maximumTriggerCountPerEvent,
+                useStagedActivationChain: true);
+        }
+
+        public int ResumeActiveResolution(
+            int maximumPassCountPerAltar,
+            int maximumEventCountPerPass,
+            int maximumTriggerCountPerEvent)
+        {
+            ValidateBudgets(
+                maximumPassCountPerAltar,
+                maximumEventCountPerPass,
+                maximumTriggerCountPerEvent);
+
+            if (_activeCombatStartedEvent == null)
+            {
+                throw new InvalidOperationException(
+                    "There is no active battle-start " +
+                    "Altar resolution to resume.");
+            }
+
+            return ContinueActiveResolution(
+                maximumPassCountPerAltar,
+                maximumEventCountPerPass,
+                maximumTriggerCountPerEvent);
+        }
+
+        private int StartAndResolveAllAltarsCore(
+            CombatStartedCombatEvent
+                combatStartedEvent,
+            int maximumPassCountPerAltar,
+            int maximumEventCountPerPass,
+            int maximumTriggerCountPerEvent,
+            bool useStagedActivationChain)
+        {
             if (combatStartedEvent == null)
             {
                 throw new ArgumentNullException(
@@ -146,28 +218,8 @@ namespace GardenGambit.Simulation.Combat
             _resolvedActivationCount =
                 0;
 
-            return ContinueActiveResolution(
-                maximumPassCountPerAltar,
-                maximumEventCountPerPass,
-                maximumTriggerCountPerEvent);
-        }
-
-        public int ResumeActiveResolution(
-            int maximumPassCountPerAltar,
-            int maximumEventCountPerPass,
-            int maximumTriggerCountPerEvent)
-        {
-            ValidateBudgets(
-                maximumPassCountPerAltar,
-                maximumEventCountPerPass,
-                maximumTriggerCountPerEvent);
-
-            if (_activeCombatStartedEvent == null)
-            {
-                throw new InvalidOperationException(
-                    "There is no active battle-start " +
-                    "Altar resolution to resume.");
-            }
+            _useStagedActivationChain =
+                useStagedActivationChain;
 
             return ContinueActiveResolution(
                 maximumPassCountPerAltar,
@@ -204,13 +256,29 @@ namespace GardenGambit.Simulation.Combat
                     GetSideAt(
                         _nextSideIndex);
 
-                var resolvedOnSide =
-                    _sideRunner.StartAndResolveSide(
-                        _activeCombatStartedEvent,
-                        side,
-                        maximumPassCountPerAltar,
-                        maximumEventCountPerPass,
-                        maximumTriggerCountPerEvent);
+                int resolvedOnSide;
+
+                if (_useStagedActivationChain)
+                {
+                    resolvedOnSide =
+                        _sideRunner
+                            .StartAndResolveSideStaged(
+                                _activeCombatStartedEvent,
+                                side,
+                                maximumPassCountPerAltar,
+                                maximumEventCountPerPass,
+                                maximumTriggerCountPerEvent);
+                }
+                else
+                {
+                    resolvedOnSide =
+                        _sideRunner.StartAndResolveSide(
+                            _activeCombatStartedEvent,
+                            side,
+                            maximumPassCountPerAltar,
+                            maximumEventCountPerPass,
+                            maximumTriggerCountPerEvent);
+                }
 
                 _resolvedActivationCount =
                     checked(
@@ -278,6 +346,9 @@ namespace GardenGambit.Simulation.Combat
 
             _resolvedActivationCount =
                 0;
+
+            _useStagedActivationChain =
+                false;
         }
 
         private static CombatSide GetSideAt(

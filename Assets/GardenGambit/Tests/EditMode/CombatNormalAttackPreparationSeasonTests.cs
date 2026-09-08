@@ -294,7 +294,7 @@ namespace GardenGambit.Tests.EditMode
                     .AppendExchangeAttacks(
                         exchangeEvent,
                         CombatCardSeason.Summer,
-                        (CombatCardSeason)5));
+                        (CombatCardSeason)6));
 
             Assert.That(
                 eventLog.Count,

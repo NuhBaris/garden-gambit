@@ -49,6 +49,10 @@ namespace GardenGambit.Simulation.Combat
             OpposingSideState =
                 state.GetOpposingSide(
                     side);
+
+            SidePetState =
+                state.GetPets(
+                    side);
         }
 
         public CombatState State
@@ -74,6 +78,24 @@ namespace GardenGambit.Simulation.Combat
         public CombatSideState OpposingSideState
         {
             get;
+        }
+
+        public CombatSidePetState SidePetState
+        {
+            get;
+        }
+
+        public BoardRow GetAffectedRow(
+            CombatPetState pet)
+        {
+            if (pet == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(pet));
+            }
+
+            return SidePetState.GetAffectedRow(
+                pet.InstanceId);
         }
     }
 }

@@ -20,6 +20,9 @@ namespace GardenGambit.Simulation.Combat
         private readonly CombatNormalColumnsRunner
             _normalColumnsRunner;
 
+        private readonly CombatBattleEndRunner
+            _battleEndRunner;
+
         private readonly CombatResultResolutionResolver
             _resultResolutionResolver;
 
@@ -30,6 +33,15 @@ namespace GardenGambit.Simulation.Combat
         private readonly
             CombatNormalAttackTargetDamageReductionResolver
             _targetDamageReductionResolver;
+
+        private readonly CombatFinalRankModifierRegistry
+            _finalRankModifierRegistry;
+
+        public bool UsesStagedNormalAttackByDefault =>
+            _useStagedNormalAttackByDefault;
+
+        private readonly bool
+            _useStagedNormalAttackByDefault;
 
         private CombatStartedCombatEvent
             _activeCombatStartedEvent;
@@ -95,6 +107,30 @@ namespace GardenGambit.Simulation.Combat
                 sourceDamageModifierRegistry,
             CombatNormalAttackTargetDamageReductionResolver
                 targetDamageReductionResolver)
+            : this(
+                state,
+                metadataFactory,
+                eventLog,
+                eventQueue,
+                sourceRegistry,
+                sourceDamageModifierRegistry,
+                targetDamageReductionResolver,
+                new CombatFinalRankModifierRegistry())
+        {
+        }
+
+        public CombatResolutionRunner(
+            CombatState state,
+            CombatEventMetadataFactory metadataFactory,
+            CombatEventLog eventLog,
+            CombatEventQueue eventQueue,
+            CombatTriggerSourceRegistry sourceRegistry,
+            CombatNormalAttackSourceDamageModifierRegistry
+                sourceDamageModifierRegistry,
+            CombatNormalAttackTargetDamageReductionResolver
+                targetDamageReductionResolver,
+            CombatFinalRankModifierRegistry
+                finalRankModifierRegistry)
         {
             if (state == null)
             {
@@ -140,6 +176,13 @@ namespace GardenGambit.Simulation.Combat
                         targetDamageReductionResolver));
             }
 
+            if (finalRankModifierRegistry == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(
+                        finalRankModifierRegistry));
+            }
+
             _state =
                 state;
 
@@ -148,6 +191,9 @@ namespace GardenGambit.Simulation.Combat
 
             _targetDamageReductionResolver =
                 targetDamageReductionResolver;
+
+            _finalRankModifierRegistry =
+                finalRankModifierRegistry;
 
             _combatStartResolver =
                 new CombatStartResolver(
@@ -178,11 +224,52 @@ namespace GardenGambit.Simulation.Combat
                     sourceDamageModifierRegistry,
                     targetDamageReductionResolver);
 
+            _battleEndRunner =
+                new CombatBattleEndRunner(
+                    state,
+                    metadataFactory,
+                    eventLog,
+                    _eventResolutionEngine);
+
             _resultResolutionResolver =
                 new CombatResultResolutionResolver(
                     metadataFactory,
-                    eventLog);
+                    eventLog,
+                    finalRankModifierRegistry);
+
+            _useStagedNormalAttackByDefault =
+                false;
+
         }
+
+        public CombatResolutionRunner(
+    CombatState state,
+    CombatEventMetadataFactory metadataFactory,
+    CombatEventLog eventLog,
+    CombatEventQueue eventQueue,
+    CombatTriggerSourceRegistry sourceRegistry,
+    CombatNormalAttackSourceDamageModifierRegistry
+        sourceDamageModifierRegistry,
+    CombatNormalAttackTargetDamageReductionResolver
+        targetDamageReductionResolver,
+    CombatFinalRankModifierRegistry
+        finalRankModifierRegistry,
+    bool useStagedNormalAttackByDefault)
+    : this(
+        state,
+        metadataFactory,
+        eventLog,
+        eventQueue,
+        sourceRegistry,
+        sourceDamageModifierRegistry,
+        targetDamageReductionResolver,
+        finalRankModifierRegistry)
+        {
+            _useStagedNormalAttackByDefault =
+                useStagedNormalAttackByDefault;
+        }
+
+        
 
         public bool HasActiveCombat =>
             _activeCombatStartedEvent != null;
@@ -199,6 +286,11 @@ namespace GardenGambit.Simulation.Combat
             _activeCombatStartedEvent != null &&
             _activeCombatUsesStagedNormalAttack;
 
+        public bool
+            ActiveCombatUsesStagedAltarResolution =>
+                _activeCombatStartedEvent != null &&
+                _activeCombatUsesStagedNormalAttack;
+
         public
             CombatNormalAttackSourceDamageModifierRegistry
             SourceDamageModifierRegistry =>
@@ -208,6 +300,10 @@ namespace GardenGambit.Simulation.Combat
             CombatNormalAttackTargetDamageReductionResolver
             TargetDamageReductionResolver =>
                 _targetDamageReductionResolver;
+
+        public CombatFinalRankModifierRegistry
+            FinalRankModifierRegistry =>
+                _finalRankModifierRegistry;
 
         public bool HasActiveBattleStartResolution =>
             _battleStartRunner.HasActiveResolution;
@@ -249,6 +345,20 @@ namespace GardenGambit.Simulation.Combat
         public CombatEvent ActiveAltarEvent =>
             _battleStartRunner.ActiveAltarEvent;
 
+        public bool HasStagedAltarExecution =>
+            _battleStartRunner
+                .HasStagedAltarExecution;
+
+        public CombatAltarActivationExecutionState
+            ActiveAltarExecutionState =>
+                _battleStartRunner
+                    .ActiveAltarExecutionState;
+
+        public CombatAltarActivationExecutionStage
+            ActiveAltarExecutionStage =>
+                _battleStartRunner
+                    .ActiveAltarExecutionStage;
+
         public bool HasActiveColumn =>
             _normalColumnsRunner.HasActiveColumn;
 
@@ -258,6 +368,17 @@ namespace GardenGambit.Simulation.Combat
 
         public int NextColumnValue =>
             _normalColumnsRunner.NextColumnValue;
+
+        public bool HasActiveBattleEndResolution =>
+            _battleEndRunner.HasActiveResolution;
+
+        public BattleEndStartedCombatEvent
+            ActiveBattleEndEvent =>
+                _battleEndRunner
+                    .ActiveBattleEndEvent;
+
+        public bool HasPendingBattleEndResolution =>
+            _battleEndRunner.HasPendingResolution;
 
         public int ResolvedAltarActivationCount
         {
@@ -298,7 +419,7 @@ namespace GardenGambit.Simulation.Combat
                 int maximumTriggerCountPerEvent)
         {
             return StartAndResolveCombatCore(
-                false,
+                _useStagedNormalAttackByDefault,
                 maximumExchangeCountPerColumn,
                 maximumPassCountPerExchange,
                 maximumEventCountPerPass,
@@ -328,7 +449,7 @@ namespace GardenGambit.Simulation.Combat
                 int maximumTriggerCountPerEvent)
         {
             return ResumeActiveCombatCore(
-                false,
+                _useStagedNormalAttackByDefault,
                 maximumExchangeCountPerColumn,
                 maximumPassCountPerExchange,
                 maximumEventCountPerPass,
@@ -465,6 +586,17 @@ namespace GardenGambit.Simulation.Combat
                                 maximumEventCountPerPass,
                                 maximumTriggerCountPerEvent);
                 }
+                else if (
+                    _activeCombatUsesStagedNormalAttack)
+                {
+                    _resolvedAltarActivationCount =
+                        _battleStartRunner
+                            .StartAndResolveBattleStartStaged(
+                                _activeCombatStartedEvent,
+                                maximumPassCountPerExchange,
+                                maximumEventCountPerPass,
+                                maximumTriggerCountPerEvent);
+                }
                 else
                 {
                     _resolvedAltarActivationCount =
@@ -488,6 +620,32 @@ namespace GardenGambit.Simulation.Combat
                     maximumPassCountPerExchange,
                     maximumEventCountPerPass,
                     maximumTriggerCountPerEvent);
+
+                _activePhase =
+                    ResolutionPhase.BattleEnd;
+            }
+
+            if (_activePhase ==
+                ResolutionPhase.BattleEnd)
+            {
+                if (_battleEndRunner
+                        .HasActiveResolution)
+                {
+                    _battleEndRunner
+                        .ResumeActiveBattleEnd(
+                            maximumPassCountPerExchange,
+                            maximumEventCountPerPass,
+                            maximumTriggerCountPerEvent);
+                }
+                else
+                {
+                    _battleEndRunner
+                        .StartAndResolveBattleEnd(
+                            _activeCombatStartedEvent,
+                            maximumPassCountPerExchange,
+                            maximumEventCountPerPass,
+                            maximumTriggerCountPerEvent);
+                }
 
                 _activePhase =
                     ResolutionPhase.Result;
@@ -567,17 +725,18 @@ namespace GardenGambit.Simulation.Combat
                 ResolutionPhase.Result)
             {
                 throw new InvalidOperationException(
-                    "Combat result cannot be resolved " +
-                    "before battle-start and normal-column " +
-                    "resolution are complete.");
+                    "Combat result cannot be resolved before " +
+                    "battle-start, normal-column and Battle " +
+                    "End resolution are complete.");
             }
 
             if (_activeCompletedEvent == null)
             {
                 _activeCompletedEvent =
-                    _resultResolutionResolver.Resolve(
-                        _state,
-                        _activeCombatStartedEvent);
+                    _resultResolutionResolver
+                        .ResolveAfterBattleEnd(
+                            _state,
+                            _activeCombatStartedEvent);
             }
 
             _eventResolutionEngine.Drain(
@@ -618,9 +777,10 @@ namespace GardenGambit.Simulation.Combat
                 new
                     CombatNormalAttackTargetDamageReductionRegistry();
 
-            return new CombatNormalAttackTargetDamageReductionResolver(
-                reductionRegistry,
-                usageCommitter);
+            return new
+                CombatNormalAttackTargetDamageReductionResolver(
+                    reductionRegistry,
+                    usageCommitter);
         }
 
         private static void ValidateBudgets(
@@ -674,7 +834,9 @@ namespace GardenGambit.Simulation.Combat
 
             NormalColumns = 2,
 
-            Result = 3
+            BattleEnd = 3,
+
+            Result = 4
         }
     }
 }

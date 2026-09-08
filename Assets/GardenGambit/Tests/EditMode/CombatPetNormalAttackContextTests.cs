@@ -50,6 +50,11 @@ namespace GardenGambit.Tests.EditMode
                 context.OpposingSideState,
                 Is.SameAs(
                     state.Enemy));
+
+            Assert.That(
+                context.SidePetState,
+                Is.SameAs(
+                    state.PlayerPets));
         }
 
         [Test]
@@ -93,6 +98,11 @@ namespace GardenGambit.Tests.EditMode
                 context.OpposingSideState,
                 Is.SameAs(
                     state.Player));
+
+            Assert.That(
+                context.SidePetState,
+                Is.SameAs(
+                    state.EnemyPets));
         }
 
         [Test]
@@ -131,6 +141,11 @@ namespace GardenGambit.Tests.EditMode
                 context.OpposingSideState,
                 Is.SameAs(
                     state.Enemy));
+
+            Assert.That(
+                context.SidePetState,
+                Is.SameAs(
+                    state.PlayerPets));
         }
 
         [Test]
@@ -169,13 +184,162 @@ namespace GardenGambit.Tests.EditMode
                         null));
         }
 
+        [Test]
+        public void
+            GetAffectedRow_WithUpperPet_ReturnsFront()
+        {
+            var upperPet =
+                CreatePet(
+                    "pet-upper",
+                    1001);
+
+            var lowerPet =
+                CreatePet(
+                    "pet-lower",
+                    1002);
+
+            var state =
+                CreateState(
+                    new[]
+                    {
+                        upperPet,
+                        lowerPet
+                    },
+                    Array.Empty<CombatPetState>());
+
+            var context =
+                new CombatPetNormalAttackContext(
+                    state,
+                    CombatSide.Player,
+                    CreateNormalAttackEvent(
+                        CombatSide.Player));
+
+            var affectedRow =
+                context.GetAffectedRow(
+                    upperPet);
+
+            Assert.That(
+                affectedRow,
+                Is.EqualTo(
+                    BoardRow.Front));
+        }
+
+        [Test]
+        public void
+            GetAffectedRow_WithLowerPet_ReturnsBack()
+        {
+            var upperPet =
+                CreatePet(
+                    "pet-upper",
+                    1001);
+
+            var lowerPet =
+                CreatePet(
+                    "pet-lower",
+                    1002);
+
+            var state =
+                CreateState(
+                    new[]
+                    {
+                        upperPet,
+                        lowerPet
+                    },
+                    Array.Empty<CombatPetState>());
+
+            var context =
+                new CombatPetNormalAttackContext(
+                    state,
+                    CombatSide.Player,
+                    CreateNormalAttackEvent(
+                        CombatSide.Player));
+
+            var affectedRow =
+                context.GetAffectedRow(
+                    lowerPet);
+
+            Assert.That(
+                affectedRow,
+                Is.EqualTo(
+                    BoardRow.Back));
+        }
+
+        [Test]
+        public void GetAffectedRow_WithNullPet_Throws()
+        {
+            var context =
+                new CombatPetNormalAttackContext(
+                    CreateEmptyState(),
+                    CombatSide.Player,
+                    CreateNormalAttackEvent(
+                        CombatSide.Player));
+
+            Assert.Throws<ArgumentNullException>(
+                () => context.GetAffectedRow(
+                    null));
+        }
+
+        [Test]
+        public void
+            GetAffectedRow_WithOpposingSidePet_Throws()
+        {
+            var playerPet =
+                CreatePet(
+                    "pet-player",
+                    1001);
+
+            var enemyPet =
+                CreatePet(
+                    "pet-enemy",
+                    2001);
+
+            var state =
+                CreateState(
+                    new[]
+                    {
+                        playerPet
+                    },
+                    new[]
+                    {
+                        enemyPet
+                    });
+
+            var context =
+                new CombatPetNormalAttackContext(
+                    state,
+                    CombatSide.Player,
+                    CreateNormalAttackEvent(
+                        CombatSide.Player));
+
+            Assert.Throws<ArgumentException>(
+                () => context.GetAffectedRow(
+                    enemyPet));
+        }
+
         private static CombatState CreateEmptyState()
+        {
+            return CreateState(
+                Array.Empty<CombatPetState>(),
+                Array.Empty<CombatPetState>());
+        }
+
+        private static CombatState CreateState(
+            CombatPetState[] playerPets,
+            CombatPetState[] enemyPets)
         {
             return new CombatState(
                 CreateEmptySide(
                     CombatSide.Player),
                 CreateEmptySide(
-                    CombatSide.Enemy));
+                    CombatSide.Enemy),
+                new CombatSidePetState(
+                    CombatSide.Player,
+                    new CombatPetRegistry(
+                        playerPets)),
+                new CombatSidePetState(
+                    CombatSide.Enemy,
+                    new CombatPetRegistry(
+                        enemyPets)));
         }
 
         private static CombatSideState
@@ -192,6 +356,17 @@ namespace GardenGambit.Tests.EditMode
                     BattleHealth.NormalBaselineValue),
                 new AttackMultiplier(
                     AttackMultiplier.BaseValue));
+        }
+
+        private static CombatPetState CreatePet(
+            string definitionId,
+            long instanceId)
+        {
+            return new CombatPetState(
+                new DefinitionId(
+                    definitionId),
+                new InstanceId(
+                    instanceId));
         }
 
         private static NormalAttackCombatEvent

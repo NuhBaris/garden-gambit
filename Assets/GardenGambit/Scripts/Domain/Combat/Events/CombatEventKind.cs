@@ -36,6 +36,10 @@ namespace GardenGambit.Domain.Combat
 
         WarAltarActivated = 16,
 
-        BattleStartStageStarted = 17
+        BattleStartStageStarted = 17,
+
+        BattleEndStarted = 18,
+
+        ArmorGain = 19
     }
 }

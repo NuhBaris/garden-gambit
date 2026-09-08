@@ -12,11 +12,18 @@ namespace GardenGambit.Simulation.Combat
         private readonly CombatAltarActivationResolver
             _activationResolver;
 
+        private readonly
+            CombatAltarActivationExecutionResolver
+            _executionResolver;
+
         private readonly CombatEventResolutionEngine
             _resolutionEngine;
 
         private CombatEvent
             _activeAltarEvent;
+
+        private CombatAltarActivationExecutionState
+            _activeExecutionState;
 
         public CombatAltarActivationChainResolver(
             CombatState state,
@@ -58,13 +65,36 @@ namespace GardenGambit.Simulation.Combat
 
             _resolutionEngine =
                 resolutionEngine;
+
+            _executionResolver =
+                new
+                    CombatAltarActivationExecutionResolver(
+                        _activationResolver,
+                        resolutionEngine);
         }
 
         public bool HasActiveChain =>
-            _activeAltarEvent != null;
+            _activeAltarEvent != null ||
+            _activeExecutionState != null;
 
         public CombatEvent ActiveAltarEvent =>
-            _activeAltarEvent;
+            _activeExecutionState != null
+                ? _activeExecutionState.AltarEvent
+                : _activeAltarEvent;
+
+        public bool HasStagedExecution =>
+            _activeExecutionState != null;
+
+        public CombatAltarActivationExecutionState
+            ActiveExecutionState =>
+                _activeExecutionState;
+
+        public CombatAltarActivationExecutionStage
+            ActiveStage =>
+                _activeExecutionState == null
+                    ? CombatAltarActivationExecutionStage
+                        .Unspecified
+                    : _activeExecutionState.Stage;
 
         public bool HasPendingResolution =>
             _resolutionEngine.HasPendingWork;
@@ -78,32 +108,14 @@ namespace GardenGambit.Simulation.Combat
                 int maximumEventCountPerPass,
                 int maximumTriggerCountPerEvent)
         {
-            if (combatStartedEvent == null)
-            {
-                throw new ArgumentNullException(
-                    nameof(combatStartedEvent));
-            }
-
-            if (!donorPosition.IsValid)
-            {
-                throw new ArgumentException(
-                    "A valid Altar donor position " +
-                    "is required.",
-                    nameof(donorPosition));
-            }
-
-            ValidateBudgets(
+            ValidateActivationRequest(
+                combatStartedEvent,
+                donorPosition,
                 maximumPassCount,
                 maximumEventCountPerPass,
                 maximumTriggerCountPerEvent);
 
-            if (_activeAltarEvent != null)
-            {
-                throw new InvalidOperationException(
-                    "The active Altar death chain must " +
-                    "be completed before another Altar " +
-                    "can activate.");
-            }
+            EnsureNoActiveChain();
 
             var altarEvent =
                 _activationResolver.TryActivate(
@@ -125,6 +137,45 @@ namespace GardenGambit.Simulation.Combat
                 maximumTriggerCountPerEvent);
         }
 
+        public CombatEvent
+            TryActivateAndCompleteStagedChain(
+                CombatStartedCombatEvent
+                    combatStartedEvent,
+                BoardPosition donorPosition,
+                int maximumPassCount,
+                int maximumEventCountPerPass,
+                int maximumTriggerCountPerEvent)
+        {
+            ValidateActivationRequest(
+                combatStartedEvent,
+                donorPosition,
+                maximumPassCount,
+                maximumEventCountPerPass,
+                maximumTriggerCountPerEvent);
+
+            EnsureNoActiveChain();
+
+            var executionState =
+                _activationResolver
+                    .TryStartActivation(
+                        _state,
+                        combatStartedEvent,
+                        donorPosition);
+
+            if (executionState == null)
+            {
+                return null;
+            }
+
+            _activeExecutionState =
+                executionState;
+
+            return CompleteActiveChain(
+                maximumPassCount,
+                maximumEventCountPerPass,
+                maximumTriggerCountPerEvent);
+        }
+
         public CombatEvent ResumeActiveChain(
             int maximumPassCount,
             int maximumEventCountPerPass,
@@ -135,7 +186,7 @@ namespace GardenGambit.Simulation.Combat
                 maximumEventCountPerPass,
                 maximumTriggerCountPerEvent);
 
-            if (_activeAltarEvent == null)
+            if (!HasActiveChain)
             {
                 throw new InvalidOperationException(
                     "There is no active Altar death " +
@@ -153,7 +204,22 @@ namespace GardenGambit.Simulation.Combat
             int maximumEventCountPerPass,
             int maximumTriggerCountPerEvent)
         {
-            var altarEvent =
+            if (_activeExecutionState != null)
+            {
+                var altarEvent =
+                    _executionResolver.Continue(
+                        _activeExecutionState,
+                        maximumPassCount,
+                        maximumEventCountPerPass,
+                        maximumTriggerCountPerEvent);
+
+                _activeExecutionState =
+                    null;
+
+                return altarEvent;
+            }
+
+            var legacyAltarEvent =
                 _activeAltarEvent;
 
             _resolutionEngine.Drain(
@@ -161,9 +227,49 @@ namespace GardenGambit.Simulation.Combat
                 maximumEventCountPerPass,
                 maximumTriggerCountPerEvent);
 
-            _activeAltarEvent = null;
+            _activeAltarEvent =
+                null;
 
-            return altarEvent;
+            return legacyAltarEvent;
+        }
+
+        private void EnsureNoActiveChain()
+        {
+            if (HasActiveChain)
+            {
+                throw new InvalidOperationException(
+                    "The active Altar death chain must " +
+                    "be completed before another Altar " +
+                    "can activate.");
+            }
+        }
+
+        private static void ValidateActivationRequest(
+            CombatStartedCombatEvent
+                combatStartedEvent,
+            BoardPosition donorPosition,
+            int maximumPassCount,
+            int maximumEventCountPerPass,
+            int maximumTriggerCountPerEvent)
+        {
+            if (combatStartedEvent == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(combatStartedEvent));
+            }
+
+            if (!donorPosition.IsValid)
+            {
+                throw new ArgumentException(
+                    "A valid Altar donor position " +
+                    "is required.",
+                    nameof(donorPosition));
+            }
+
+            ValidateBudgets(
+                maximumPassCount,
+                maximumEventCountPerPass,
+                maximumTriggerCountPerEvent);
         }
 
         private static void ValidateBudgets(

@@ -217,7 +217,7 @@ namespace GardenGambit.Tests.EditMode
 
         [Test]
         public void
-            StagedCombat_WithTwoSunBirds_StacksOneBonusFromEachPet()
+    StagedCombat_WithTwoSunBirds_OnlyUpperPetAffectsFrontAttack()
         {
             var environment =
                 CreateEnvironment(
@@ -247,24 +247,37 @@ namespace GardenGambit.Tests.EditMode
             Assert.That(
                 environment.Runner
                     .ResolvedExchangeCount,
-                Is.EqualTo(1));
+                Is.EqualTo(2));
 
             Assert.That(
                 playerAttacks.Count,
-                Is.EqualTo(1));
+                Is.EqualTo(2));
 
             Assert.That(
                 environment.ModifierRegistry
                     .GetTotalModifier(
                         playerAttacks[0]
                             .Metadata.EventId),
-                Is.EqualTo(2));
+                Is.EqualTo(1));
 
             Assert.That(
                 environment.ModifierRegistry
                     .ResolveDamage(
                         playerAttacks[0]),
-                Is.EqualTo(3));
+                Is.EqualTo(2));
+
+            Assert.That(
+                environment.ModifierRegistry
+                    .GetTotalModifier(
+                        playerAttacks[1]
+                            .Metadata.EventId),
+                Is.Zero);
+
+            Assert.That(
+                environment.ModifierRegistry
+                    .ResolveDamage(
+                        playerAttacks[1]),
+                Is.EqualTo(1));
 
             Assert.That(
                 environment.UsageCommitter
@@ -282,12 +295,16 @@ namespace GardenGambit.Tests.EditMode
                             .InstanceId,
                         environment.PlayerCard
                             .InstanceId),
-                Is.True);
+                Is.False);
+
+            Assert.That(
+                environment.State.Enemy.Cards.Count,
+                Is.Zero);
         }
 
         [Test]
         public void
-            ResumeStagedCombat_AfterSunBirdTriggerBudgetExhaustion_DoesNotRepeatAttackOrModifier()
+    ResumeStagedCombat_AfterEventBudgetExhaustion_DoesNotRepeatSunBirdModifier()
         {
             var environment =
                 CreateEnvironment(
@@ -296,10 +313,10 @@ namespace GardenGambit.Tests.EditMode
                     enemySeason:
                         CombatCardSeason.Winter,
                     playerHp: 10,
-                    enemyHp: 3,
+                    enemyHp: 2,
                     playerAttack: 1,
                     enemyAttack: 0,
-                    playerSunBirdCount: 2,
+                    playerSunBirdCount: 1,
                     enemySunBirdCount: 0);
 
             Assert.Throws<InvalidOperationException>(
@@ -307,8 +324,8 @@ namespace GardenGambit.Tests.EditMode
                     .StartAndResolveCombatStaged(
                         10,
                         100,
-                        100,
-                        1));
+                        2,
+                        100));
 
             var playerAttacksBeforeResume =
                 GetAttackEvents(
@@ -365,7 +382,7 @@ namespace GardenGambit.Tests.EditMode
                         10,
                         100,
                         100,
-                        10);
+                        100);
 
             var playerAttacksAfterResume =
                 GetAttackEvents(
@@ -408,12 +425,12 @@ namespace GardenGambit.Tests.EditMode
                     .GetTotalModifier(
                         playerAttacksAfterResume[0]
                             .Metadata.EventId),
-                Is.EqualTo(2));
+                Is.EqualTo(1));
 
             Assert.That(
                 CountTriggeredPets(
                     environment),
-                Is.EqualTo(2));
+                Is.EqualTo(1));
 
             Assert.That(
                 environment.State.Enemy.Cards.Count,
