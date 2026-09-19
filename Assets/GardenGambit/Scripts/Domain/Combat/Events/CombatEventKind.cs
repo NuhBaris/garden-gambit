@@ -40,6 +40,11 @@ namespace GardenGambit.Domain.Combat
 
         BattleEndStarted = 18,
 
-        ArmorGain = 19
+        ArmorGain = 19,
+
+        AttackGain = 20,
+
+        ArmorRemoved = 21
+
     }
 }

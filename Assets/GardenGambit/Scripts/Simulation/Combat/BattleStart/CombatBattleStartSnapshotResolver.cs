@@ -10,6 +10,21 @@ namespace GardenGambit.Simulation.Combat
         public CombatBattleStartSnapshot Resolve(
             CombatState state)
         {
+            return Resolve(
+                state,
+                CombatPokerHand.Unspecified,
+                CombatPokerHand.Unspecified,
+                CombatPokerHand.Unspecified,
+                CombatPokerHand.Unspecified);
+        }
+
+        public CombatBattleStartSnapshot Resolve(
+            CombatState state,
+            CombatPokerHand playerFrontPokerHand,
+            CombatPokerHand playerBackPokerHand,
+            CombatPokerHand enemyFrontPokerHand,
+            CombatPokerHand enemyBackPokerHand)
+        {
             if (state == null)
             {
                 throw new ArgumentNullException(
@@ -18,11 +33,15 @@ namespace GardenGambit.Simulation.Combat
 
             var playerSnapshot =
                 CreateSideSnapshot(
-                    state.Player);
+                    state.Player,
+                    playerFrontPokerHand,
+                    playerBackPokerHand);
 
             var enemySnapshot =
                 CreateSideSnapshot(
-                    state.Enemy);
+                    state.Enemy,
+                    enemyFrontPokerHand,
+                    enemyBackPokerHand);
 
             return new CombatBattleStartSnapshot(
                 playerSnapshot,
@@ -32,7 +51,9 @@ namespace GardenGambit.Simulation.Combat
         private static
             CombatBattleStartSideSnapshot
             CreateSideSnapshot(
-                CombatSideState sideState)
+                CombatSideState sideState,
+                CombatPokerHand frontPokerHand,
+                CombatPokerHand backPokerHand)
         {
             var occupiedSlots =
                 new List<CombatSlotState>();
@@ -73,7 +94,9 @@ namespace GardenGambit.Simulation.Combat
 
             return new CombatBattleStartSideSnapshot(
                 sideState.Side,
-                cardSnapshots);
+                cardSnapshots,
+                frontPokerHand,
+                backPokerHand);
         }
 
         private static int CompareSlots(

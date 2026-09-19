@@ -66,6 +66,7 @@ namespace GardenGambit.Domain.Combat
             DefinitionId = card.DefinitionId;
             InstanceId = card.InstanceId;
             Rank = card.Rank;
+            Season = card.Season;
             HpCapacity = card.HpCapacity;
             CurrentHp = card.CurrentHp;
             Armor = card.Armor;
@@ -86,6 +87,11 @@ namespace GardenGambit.Domain.Combat
         }
 
         public CardRank Rank
+        {
+            get;
+        }
+
+        public CombatCardSeason Season
         {
             get;
         }

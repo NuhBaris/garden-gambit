@@ -140,6 +140,7 @@ namespace GardenGambit.Simulation.Combat
                         .TryApplyHpStatGain(
                             state,
                             altarEvent,
+                            preview.DonorInstanceId,
                             preview.RecipientPosition,
                             preview.TransferAmount);
 
@@ -184,8 +185,8 @@ namespace GardenGambit.Simulation.Combat
             }
 
             _transferApplier
-                .ApplyDonorDeathThreshold(
-                    executionState.TransferPreview);
+                .ApplyDonorDeathThresholdAfterTransferTriggers(
+                    executionState);
 
             var deathEvent =
                 _deathEventResolver.AppendFromAltar(

@@ -92,6 +92,11 @@ namespace GardenGambit.Domain.Combat
                 ? ActiveCard.Rank
                 : Tombstone.Rank;
 
+        public CombatCardSeason Season =>
+            IsActive
+                ? ActiveCard.Season
+                : Tombstone.Season;
+
         public int HpCapacity =>
             IsActive
                 ? ActiveCard.HpCapacity

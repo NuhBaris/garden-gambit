@@ -543,6 +543,211 @@ namespace GardenGambit.Tests.EditMode
                 Is.EqualTo(2));
         }
 
+        [TestCase(false, false)]
+        [TestCase(false, true)]
+        [TestCase(true, false)]
+        [TestCase(true, true)]
+        public void GainMethods_WithExplicitSource_PreserveIdentityAndValues(
+            bool heal,
+            bool selfSource)
+        {
+            var environment = CreateEnvironment(
+                hpCapacity: 10,
+                currentHp: 8);
+
+            var sourceInstanceId = selfSource
+                ? environment.Card.InstanceId
+                : new InstanceId(2);
+
+            var gainEvent = ApplyGainWithSource(
+                environment,
+                heal,
+                sourceInstanceId,
+                5);
+
+            Assert.That(gainEvent, Is.Not.Null);
+            Assert.That(
+                gainEvent.SourceInstanceId,
+                Is.EqualTo(sourceInstanceId));
+            Assert.That(
+                gainEvent.TargetInstanceId,
+                Is.EqualTo(environment.Card.InstanceId));
+            Assert.That(
+                gainEvent.TargetPosition,
+                Is.EqualTo(environment.Position));
+            Assert.That(
+                gainEvent.IsSelfSource,
+                Is.EqualTo(selfSource));
+            Assert.That(
+                gainEvent.IsFromAnotherSource,
+                Is.EqualTo(!selfSource));
+
+            Assert.That(gainEvent.IsHeal, Is.EqualTo(heal));
+            Assert.That(gainEvent.IsHpStatGain, Is.EqualTo(!heal));
+            Assert.That(gainEvent.PreviousHpCapacity, Is.EqualTo(10));
+            Assert.That(gainEvent.PreviousHp, Is.EqualTo(8));
+            Assert.That(
+                gainEvent.ActualGainedAmount,
+                Is.EqualTo(heal ? 2 : 5));
+            Assert.That(
+                environment.Card.HpCapacity,
+                Is.EqualTo(heal ? 10 : 15));
+            Assert.That(
+                environment.Card.CurrentHp,
+                Is.EqualTo(heal ? 10 : 13));
+            Assert.That(
+                gainEvent.CurrentHpCapacity,
+                Is.EqualTo(environment.Card.HpCapacity));
+            Assert.That(
+                gainEvent.CurrentHp,
+                Is.EqualTo(environment.Card.CurrentHp));
+
+            Assert.That(
+                gainEvent.Metadata.ParentEventId.Value,
+                Is.EqualTo(environment.ParentEvent.Metadata.EventId));
+            Assert.That(
+                gainEvent.Metadata.TriggerRootId,
+                Is.EqualTo(environment.ParentEvent.Metadata.TriggerRootId));
+            Assert.That(environment.EventLog.Count, Is.EqualTo(2));
+            Assert.That(
+                environment.EventLog.Events[1],
+                Is.SameAs(gainEvent));
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void GainMethods_WithLegacyOverload_KeepSelfSource(
+            bool heal)
+        {
+            var environment = CreateEnvironment(
+                hpCapacity: 10,
+                currentHp: 8);
+
+            var gainEvent = heal
+                ? environment.Resolver.TryApplyHeal(
+                    environment.State,
+                    environment.ParentEvent,
+                    environment.Position,
+                    1)
+                : environment.Resolver.TryApplyHpStatGain(
+                    environment.State,
+                    environment.ParentEvent,
+                    environment.Position,
+                    1);
+
+            Assert.That(gainEvent, Is.Not.Null);
+            Assert.That(
+                gainEvent.SourceInstanceId,
+                Is.EqualTo(environment.Card.InstanceId));
+            Assert.That(
+                gainEvent.TargetInstanceId,
+                Is.EqualTo(environment.Card.InstanceId));
+            Assert.That(gainEvent.IsSelfSource, Is.True);
+            Assert.That(gainEvent.IsFromAnotherSource, Is.False);
+        }
+
+        [TestCase(false, 0)]
+        [TestCase(false, 1)]
+        [TestCase(true, 0)]
+        [TestCase(true, 1)]
+        public void GainMethods_WithInvalidSource_RejectWithoutSideEffects(
+            bool heal,
+            int requestedAmount)
+        {
+            var environment = CreateEnvironment(
+                hpCapacity: 10,
+                currentHp: 8);
+
+            var exception = Assert.Throws<ArgumentException>(
+                () => ApplyGainWithSource(
+                    environment,
+                    heal,
+                    default(InstanceId),
+                    requestedAmount));
+
+            Assert.That(
+                exception.ParamName,
+                Is.EqualTo("sourceInstanceId"));
+            Assert.That(environment.Card.HpCapacity, Is.EqualTo(10));
+            Assert.That(environment.Card.CurrentHp, Is.EqualTo(8));
+            Assert.That(environment.EventLog.Count, Is.EqualTo(1));
+
+            var gainEvent = ApplyGainWithSource(
+                environment,
+                heal,
+                new InstanceId(2),
+                1);
+
+            Assert.That(gainEvent, Is.Not.Null);
+            Assert.That(
+                gainEvent.Metadata.EventId.Value,
+                Is.EqualTo(2L));
+            Assert.That(
+                gainEvent.Metadata.SequenceNo.Value,
+                Is.EqualTo(2L));
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void GainMethods_WithExplicitSourceAndZeroAmount_DoNotEmit(
+            bool heal)
+        {
+            var environment = CreateEnvironment(
+                hpCapacity: 10,
+                currentHp: 8);
+
+            var gainEvent = ApplyGainWithSource(
+                environment,
+                heal,
+                new InstanceId(2),
+                0);
+
+            Assert.That(gainEvent, Is.Null);
+            Assert.That(environment.Card.HpCapacity, Is.EqualTo(10));
+            Assert.That(environment.Card.CurrentHp, Is.EqualTo(8));
+            Assert.That(environment.EventLog.Count, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void TryApplyHeal_WithExplicitSourceAtFullHp_DoesNotEmit()
+        {
+            var environment = CreateEnvironment(
+                hpCapacity: 10,
+                currentHp: 10);
+
+            var gainEvent = ApplyGainWithSource(
+                environment,
+                true,
+                new InstanceId(2),
+                5);
+
+            Assert.That(gainEvent, Is.Null);
+            Assert.That(environment.Card.HpCapacity, Is.EqualTo(10));
+            Assert.That(environment.Card.CurrentHp, Is.EqualTo(10));
+            Assert.That(environment.EventLog.Count, Is.EqualTo(1));
+        }
+
+        private static HpGainCombatEvent ApplyGainWithSource(
+            TestEnvironment environment,
+            bool heal,
+            InstanceId sourceInstanceId,
+            int requestedAmount)
+        {
+            return heal
+                ? environment.Resolver.TryApplyHeal(
+                    environment.State,
+                    environment.ParentEvent,
+                    sourceInstanceId,
+                    environment.Position,
+                    requestedAmount)
+                : environment.Resolver.TryApplyHpStatGain(
+                    environment.State,
+                    environment.ParentEvent,
+                    sourceInstanceId,
+                    environment.Position,
+                    requestedAmount);
+        }
+
         private static TestEnvironment
             CreateEnvironment(
                 int hpCapacity,

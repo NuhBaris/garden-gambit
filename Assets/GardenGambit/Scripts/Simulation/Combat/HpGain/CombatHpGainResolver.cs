@@ -1,5 +1,6 @@
 using System;
 using GardenGambit.Domain.Combat;
+using GardenGambit.Domain.Identity;
 
 namespace GardenGambit.Simulation.Combat
 {
@@ -27,26 +28,45 @@ namespace GardenGambit.Simulation.Combat
                     nameof(eventLog));
             }
 
-            _metadataFactory =
-                metadataFactory;
-
-            _eventLog =
-                eventLog;
+            _metadataFactory = metadataFactory;
+            _eventLog = eventLog;
         }
 
-        public HpGainCombatEvent
-            TryApplyHpStatGain(
-                CombatState state,
-                CombatEvent parentEvent,
-                BoardPosition targetPosition,
-                int requestedAmount)
+        public HpGainCombatEvent TryApplyHpStatGain(
+            CombatState state,
+            CombatEvent parentEvent,
+            BoardPosition targetPosition,
+            int requestedAmount)
         {
-            var targetCard =
-                ValidateRequest(
-                    state,
-                    parentEvent,
-                    targetPosition,
-                    requestedAmount);
+            var targetCard = ValidateRequest(
+                state,
+                parentEvent,
+                targetPosition,
+                requestedAmount);
+
+            return TryApplyHpStatGain(
+                state,
+                parentEvent,
+                targetCard.InstanceId,
+                targetPosition,
+                requestedAmount);
+        }
+
+        public HpGainCombatEvent TryApplyHpStatGain(
+            CombatState state,
+            CombatEvent parentEvent,
+            InstanceId sourceInstanceId,
+            BoardPosition targetPosition,
+            int requestedAmount)
+        {
+            ValidateSourceInstanceId(
+                sourceInstanceId);
+
+            var targetCard = ValidateRequest(
+                state,
+                parentEvent,
+                targetPosition,
+                requestedAmount);
 
             if (requestedAmount == 0)
             {
@@ -60,17 +80,13 @@ namespace GardenGambit.Simulation.Combat
                 targetCard.CurrentHp;
 
             var currentHpCapacityValue =
-                (long)previousHpCapacity +
-                requestedAmount;
+                (long)previousHpCapacity + requestedAmount;
 
             var currentHpValue =
-                (long)previousHp +
-                requestedAmount;
+                (long)previousHp + requestedAmount;
 
-            if (currentHpCapacityValue >
-                    int.MaxValue ||
-                currentHpValue >
-                    int.MaxValue)
+            if (currentHpCapacityValue > int.MaxValue ||
+                currentHpValue > int.MaxValue)
             {
                 throw new OverflowException(
                     "HP stat gain would overflow the " +
@@ -83,19 +99,18 @@ namespace GardenGambit.Simulation.Combat
             var currentHp =
                 (int)currentHpValue;
 
-            var metadata =
-                _metadataFactory.CreateChild(
-                    parentEvent.Metadata);
+            var metadata = _metadataFactory.CreateChild(
+                parentEvent.Metadata);
 
-            var hpGainEvent =
-                new HpGainCombatEvent(
-                    metadata,
-                    targetCard.InstanceId,
-                    targetPosition,
-                    previousHpCapacity,
-                    currentHpCapacity,
-                    previousHp,
-                    currentHp);
+            var hpGainEvent = new HpGainCombatEvent(
+                metadata,
+                sourceInstanceId,
+                targetCard.InstanceId,
+                targetPosition,
+                previousHpCapacity,
+                currentHpCapacity,
+                previousHp,
+                currentHp);
 
             _eventLog.EnsureCanAppend(
                 hpGainEvent);
@@ -115,12 +130,35 @@ namespace GardenGambit.Simulation.Combat
             BoardPosition targetPosition,
             int requestedAmount)
         {
-            var targetCard =
-                ValidateRequest(
-                    state,
-                    parentEvent,
-                    targetPosition,
-                    requestedAmount);
+            var targetCard = ValidateRequest(
+                state,
+                parentEvent,
+                targetPosition,
+                requestedAmount);
+
+            return TryApplyHeal(
+                state,
+                parentEvent,
+                targetCard.InstanceId,
+                targetPosition,
+                requestedAmount);
+        }
+
+        public HpGainCombatEvent TryApplyHeal(
+            CombatState state,
+            CombatEvent parentEvent,
+            InstanceId sourceInstanceId,
+            BoardPosition targetPosition,
+            int requestedAmount)
+        {
+            ValidateSourceInstanceId(
+                sourceInstanceId);
+
+            var targetCard = ValidateRequest(
+                state,
+                parentEvent,
+                targetPosition,
+                requestedAmount);
 
             if (requestedAmount == 0)
             {
@@ -134,37 +172,32 @@ namespace GardenGambit.Simulation.Combat
                 targetCard.CurrentHp;
 
             var missingHp =
-                (long)previousHpCapacity -
-                previousHp;
+                (long)previousHpCapacity - previousHp;
 
-            var actualGainedAmount =
-                (int)Math.Min(
-                    (long)requestedAmount,
-                    missingHp);
+            var actualGainedAmount = (int)Math.Min(
+                (long)requestedAmount,
+                missingHp);
 
             if (actualGainedAmount <= 0)
             {
                 return null;
             }
 
-            var currentHp =
-                checked(
-                    previousHp +
-                    actualGainedAmount);
+            var currentHp = checked(
+                previousHp + actualGainedAmount);
 
-            var metadata =
-                _metadataFactory.CreateChild(
-                    parentEvent.Metadata);
+            var metadata = _metadataFactory.CreateChild(
+                parentEvent.Metadata);
 
-            var hpGainEvent =
-                new HpGainCombatEvent(
-                    metadata,
-                    targetCard.InstanceId,
-                    targetPosition,
-                    previousHpCapacity,
-                    previousHpCapacity,
-                    previousHp,
-                    currentHp);
+            var hpGainEvent = new HpGainCombatEvent(
+                metadata,
+                sourceInstanceId,
+                targetCard.InstanceId,
+                targetPosition,
+                previousHpCapacity,
+                previousHpCapacity,
+                previousHp,
+                currentHp);
 
             _eventLog.EnsureCanAppend(
                 hpGainEvent);
@@ -176,6 +209,17 @@ namespace GardenGambit.Simulation.Combat
                 hpGainEvent);
 
             return hpGainEvent;
+        }
+
+        private static void ValidateSourceInstanceId(
+            InstanceId sourceInstanceId)
+        {
+            if (!sourceInstanceId.IsValid)
+            {
+                throw new ArgumentException(
+                    "HP gain requires a valid source InstanceId.",
+                    nameof(sourceInstanceId));
+            }
         }
 
         private CombatCardState ValidateRequest(
@@ -234,9 +278,8 @@ namespace GardenGambit.Simulation.Combat
                     nameof(parentEvent));
             }
 
-            var loggedParentEvent =
-                _eventLog.GetEvent(
-                    parentEvent.Metadata.EventId);
+            var loggedParentEvent = _eventLog.GetEvent(
+                parentEvent.Metadata.EventId);
 
             if (!ReferenceEquals(
                     loggedParentEvent,

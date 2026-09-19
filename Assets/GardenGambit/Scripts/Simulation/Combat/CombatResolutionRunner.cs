@@ -423,7 +423,34 @@ namespace GardenGambit.Simulation.Combat
                 maximumExchangeCountPerColumn,
                 maximumPassCountPerExchange,
                 maximumEventCountPerPass,
-                maximumTriggerCountPerEvent);
+                maximumTriggerCountPerEvent,
+                CombatPokerHand.Unspecified,
+                CombatPokerHand.Unspecified,
+                CombatPokerHand.Unspecified,
+                CombatPokerHand.Unspecified);
+        }
+
+        public CombatCompletedCombatEvent
+            StartAndResolveCombat(
+                int maximumExchangeCountPerColumn,
+                int maximumPassCountPerExchange,
+                int maximumEventCountPerPass,
+                int maximumTriggerCountPerEvent,
+                CombatPokerHand playerFrontPokerHand,
+                CombatPokerHand playerBackPokerHand,
+                CombatPokerHand enemyFrontPokerHand,
+                CombatPokerHand enemyBackPokerHand)
+        {
+            return StartAndResolveCombatCore(
+                _useStagedNormalAttackByDefault,
+                maximumExchangeCountPerColumn,
+                maximumPassCountPerExchange,
+                maximumEventCountPerPass,
+                maximumTriggerCountPerEvent,
+                playerFrontPokerHand,
+                playerBackPokerHand,
+                enemyFrontPokerHand,
+                enemyBackPokerHand);
         }
 
         public CombatCompletedCombatEvent
@@ -438,7 +465,34 @@ namespace GardenGambit.Simulation.Combat
                 maximumExchangeCountPerColumn,
                 maximumPassCountPerExchange,
                 maximumEventCountPerPass,
-                maximumTriggerCountPerEvent);
+                maximumTriggerCountPerEvent,
+                CombatPokerHand.Unspecified,
+                CombatPokerHand.Unspecified,
+                CombatPokerHand.Unspecified,
+                CombatPokerHand.Unspecified);
+        }
+
+        public CombatCompletedCombatEvent
+            StartAndResolveCombatStaged(
+                int maximumExchangeCountPerColumn,
+                int maximumPassCountPerExchange,
+                int maximumEventCountPerPass,
+                int maximumTriggerCountPerEvent,
+                CombatPokerHand playerFrontPokerHand,
+                CombatPokerHand playerBackPokerHand,
+                CombatPokerHand enemyFrontPokerHand,
+                CombatPokerHand enemyBackPokerHand)
+        {
+            return StartAndResolveCombatCore(
+                true,
+                maximumExchangeCountPerColumn,
+                maximumPassCountPerExchange,
+                maximumEventCountPerPass,
+                maximumTriggerCountPerEvent,
+                playerFrontPokerHand,
+                playerBackPokerHand,
+                enemyFrontPokerHand,
+                enemyBackPokerHand);
         }
 
         public CombatCompletedCombatEvent
@@ -477,7 +531,11 @@ namespace GardenGambit.Simulation.Combat
                 int maximumExchangeCountPerColumn,
                 int maximumPassCountPerExchange,
                 int maximumEventCountPerPass,
-                int maximumTriggerCountPerEvent)
+                int maximumTriggerCountPerEvent,
+                CombatPokerHand playerFrontPokerHand,
+                CombatPokerHand playerBackPokerHand,
+                CombatPokerHand enemyFrontPokerHand,
+                CombatPokerHand enemyBackPokerHand)
         {
             ValidateBudgets(
                 maximumExchangeCountPerColumn,
@@ -503,7 +561,11 @@ namespace GardenGambit.Simulation.Combat
 
             var combatStartedEvent =
                 _combatStartResolver.Start(
-                    _state);
+                    _state,
+                    playerFrontPokerHand,
+                    playerBackPokerHand,
+                    enemyFrontPokerHand,
+                    enemyBackPokerHand);
 
             _activeCombatStartedEvent =
                 combatStartedEvent;

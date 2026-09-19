@@ -14,12 +14,33 @@ namespace GardenGambit.Simulation.Combat
             CombatPetCardTriggerUsageCommitter
             _usageCommitter;
 
+        private readonly
+            CombatPetLimitedTriggerUsageCommitter
+            _limitedUsageCommitter;
+
+        public
+            CombatNormalAttackTargetDamageReductionResolver(
+                CombatNormalAttackTargetDamageReductionRegistry
+                    reductionRegistry,
+            CombatPetCardTriggerUsageCommitter
+                usageCommitter)
+            : this(
+                reductionRegistry,
+                usageCommitter,
+                new CombatPetLimitedTriggerUsageCommitter(
+                    new
+                        CombatPetLimitedTriggerUsageRegistry()))
+        {
+        }
+
         public
             CombatNormalAttackTargetDamageReductionResolver(
                 CombatNormalAttackTargetDamageReductionRegistry
                     reductionRegistry,
                 CombatPetCardTriggerUsageCommitter
-                    usageCommitter)
+                    usageCommitter,
+                CombatPetLimitedTriggerUsageCommitter
+                    limitedUsageCommitter)
         {
             if (reductionRegistry == null)
             {
@@ -33,11 +54,20 @@ namespace GardenGambit.Simulation.Combat
                     nameof(usageCommitter));
             }
 
+            if (limitedUsageCommitter == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(limitedUsageCommitter));
+            }
+
             _reductionRegistry =
                 reductionRegistry;
 
             _usageCommitter =
                 usageCommitter;
+
+            _limitedUsageCommitter =
+                limitedUsageCommitter;
         }
 
         public
@@ -48,6 +78,10 @@ namespace GardenGambit.Simulation.Combat
         public CombatPetCardTriggerUsageCommitter
             UsageCommitter =>
                 _usageCommitter;
+
+        public CombatPetLimitedTriggerUsageCommitter
+            LimitedUsageCommitter =>
+                _limitedUsageCommitter;
 
         public int ResolveDamage(
             NormalAttackCombatEvent
@@ -93,8 +127,8 @@ namespace GardenGambit.Simulation.Combat
                 var request =
                     requests[index];
 
-                if (_usageCommitter.HasTriggered(
-                        request.UsageKey))
+                if (HasReachedUsageLimit(
+                        request))
                 {
                     continue;
                 }
@@ -114,14 +148,13 @@ namespace GardenGambit.Simulation.Combat
                         resolvedDamage -
                         actualReduction);
 
-                var wasCommitted =
-                    _usageCommitter.TryCommit(
-                        request.UsageKey,
-                        () =>
-                        {
-                            resolvedDamage =
-                                damageAfterReduction;
-                        });
+                var wasCommitted = TryCommitUsage(
+                    request,
+                    () =>
+                    {
+                        resolvedDamage =
+                            damageAfterReduction;
+                    });
 
                 if (!wasCommitted)
                 {
@@ -134,6 +167,40 @@ namespace GardenGambit.Simulation.Combat
                     .Metadata.EventId);
 
             return resolvedDamage;
+        }
+
+        private bool HasReachedUsageLimit(
+            CombatNormalAttackTargetDamageReductionRequest
+                request)
+        {
+            if (request.UsesLimitedPetUsage)
+            {
+                return _limitedUsageCommitter
+                    .HasReachedLimit(
+                        request.PetInstanceId,
+                        request.MaximumPetUsageCount);
+            }
+
+            return _usageCommitter.HasTriggered(
+                request.UsageKey);
+        }
+
+        private bool TryCommitUsage(
+            CombatNormalAttackTargetDamageReductionRequest
+                request,
+            Action resolveReduction)
+        {
+            if (request.UsesLimitedPetUsage)
+            {
+                return _limitedUsageCommitter.TryCommit(
+                    request.PetInstanceId,
+                    request.MaximumPetUsageCount,
+                    resolveReduction);
+            }
+
+            return _usageCommitter.TryCommit(
+                request.UsageKey,
+                resolveReduction);
         }
 
         private static void ValidateRequestsTarget(

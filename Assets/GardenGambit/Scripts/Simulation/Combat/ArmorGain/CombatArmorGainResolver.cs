@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using GardenGambit.Domain.Combat;
+using GardenGambit.Domain.Identity;
 
 namespace GardenGambit.Simulation.Combat
 {
@@ -93,6 +95,95 @@ namespace GardenGambit.Simulation.Combat
                 armorGainEvent);
 
             return armorGainEvent;
+        }
+
+        public IReadOnlyList<ArmorGainCombatEvent> TryApplyArmorGainBatch(
+            CombatState state,
+            CombatEvent parentEvent,
+            IEnumerable<BoardPosition> targetPositions,
+            int requestedAmount)
+        {
+            if (state == null)
+            {
+                throw new ArgumentNullException(nameof(state));
+            }
+
+            if (parentEvent == null)
+            {
+                throw new ArgumentNullException(nameof(parentEvent));
+            }
+
+            if (targetPositions == null)
+            {
+                throw new ArgumentNullException(nameof(targetPositions));
+            }
+
+            if (requestedAmount < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(requestedAmount));
+            }
+
+            ValidateLoggedParentEvent(parentEvent);
+
+            var positions = new List<BoardPosition>();
+            var cards = new List<CombatCardState>();
+            var targetIds = new HashSet<InstanceId>();
+
+            // Validate the entire request before allocating or changing any target.
+            // The caller supplies effect order; enumeration order is preserved.
+            foreach (var position in targetPositions)
+            {
+                var card = ValidateRequest(state, parentEvent, position, requestedAmount);
+
+                if (!targetIds.Add(card.InstanceId))
+                {
+                    throw new ArgumentException(
+                        "An Armor gain batch cannot contain the same target more than once.",
+                        nameof(targetPositions));
+                }
+
+                if ((long)card.Armor + requestedAmount > int.MaxValue)
+                {
+                    throw new OverflowException(
+                        "Armor gain would overflow a target card's Armor value.");
+                }
+
+                positions.Add(position);
+                cards.Add(card);
+            }
+
+            if (requestedAmount == 0 || cards.Count == 0)
+            {
+                return Array.Empty<ArmorGainCombatEvent>();
+            }
+
+            var events = new List<ArmorGainCombatEvent>(cards.Count);
+
+            // Every child has the same logged parent. The shared factory supplies
+            // unique IDs and increasing sequences within this synchronous batch.
+            // A metadata/log rejection must leave all card stats and the log intact.
+            // Allocations already made during this preflight are not rolled back.
+            for (var i = 0; i < cards.Count; i++)
+            {
+                var card = cards[i];
+                var gain = new ArmorGainCombatEvent(
+                    _metadataFactory.CreateChild(parentEvent.Metadata),
+                    card.InstanceId,
+                    positions[i],
+                    card.Armor,
+                    checked(card.Armor + requestedAmount));
+
+                _eventLog.EnsureCanAppend(gain);
+                events.Add(gain);
+            }
+
+            for (var i = 0; i < cards.Count; i++)
+            {
+                cards[i].ApplyArmorGain(requestedAmount);
+                _eventLog.Append(events[i]);
+            }
+
+            return events.AsReadOnly();
         }
 
         private CombatCardState ValidateRequest(

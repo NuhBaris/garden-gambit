@@ -58,6 +58,40 @@ namespace GardenGambit.Simulation.Combat
                 targetDamageReductionRegistry,
             CombatFinalRankModifierRegistry
                 finalRankModifierRegistry)
+            : this(
+                usageRegistry,
+                sourceDamageModifierRegistry,
+                targetDamageReductionRegistry,
+                finalRankModifierRegistry,
+                new CombatPetTriggerUsageRegistry())
+        {
+        }
+
+        public CombatPetTriggerRuntime(
+            CombatPetCardTriggerUsageRegistry usageRegistry,
+            CombatNormalAttackSourceDamageModifierRegistry sourceDamageModifierRegistry,
+            CombatNormalAttackTargetDamageReductionRegistry targetDamageReductionRegistry,
+            CombatFinalRankModifierRegistry finalRankModifierRegistry,
+            CombatPetTriggerUsageRegistry petUsageRegistry)
+            : this(
+                usageRegistry,
+                sourceDamageModifierRegistry,
+                targetDamageReductionRegistry,
+                finalRankModifierRegistry,
+                petUsageRegistry,
+                new
+                    CombatPetLimitedTriggerUsageRegistry())
+        {
+        }
+
+        public CombatPetTriggerRuntime(
+            CombatPetCardTriggerUsageRegistry usageRegistry,
+            CombatNormalAttackSourceDamageModifierRegistry sourceDamageModifierRegistry,
+            CombatNormalAttackTargetDamageReductionRegistry targetDamageReductionRegistry,
+            CombatFinalRankModifierRegistry finalRankModifierRegistry,
+            CombatPetTriggerUsageRegistry petUsageRegistry,
+            CombatPetLimitedTriggerUsageRegistry
+                limitedUsageRegistry)
         {
             if (usageRegistry == null)
             {
@@ -86,6 +120,25 @@ namespace GardenGambit.Simulation.Combat
                         finalRankModifierRegistry));
             }
 
+            if (petUsageRegistry == null)
+            {
+                throw new ArgumentNullException(nameof(petUsageRegistry));
+            }
+
+            if (limitedUsageRegistry == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(limitedUsageRegistry));
+            }
+
+            PetUsageRegistry = petUsageRegistry;
+            PetUsageCommitter = new CombatPetTriggerUsageCommitter(petUsageRegistry);
+
+            LimitedUsageRegistry = limitedUsageRegistry;
+            LimitedUsageCommitter =
+                new CombatPetLimitedTriggerUsageCommitter(
+                    limitedUsageRegistry);
+
             UsageRegistry =
                 usageRegistry;
 
@@ -107,7 +160,8 @@ namespace GardenGambit.Simulation.Combat
                 new
                     CombatNormalAttackTargetDamageReductionResolver(
                         targetDamageReductionRegistry,
-                        UsageCommitter);
+                        UsageCommitter,
+                        LimitedUsageCommitter);
 
             FactoryCatalog =
                 new
@@ -115,7 +169,8 @@ namespace GardenGambit.Simulation.Combat
                         UsageCommitter,
                         sourceDamageModifierRegistry,
                         targetDamageReductionRegistry,
-                        finalRankModifierRegistry);
+                        finalRankModifierRegistry,
+                        LimitedUsageCommitter);
 
             FactoryRegistry =
                 FactoryCatalog.CreateRegistry();
@@ -123,6 +178,22 @@ namespace GardenGambit.Simulation.Combat
             SourceBuilder =
                 new CombatPetTriggerSourceBuilder(
                     FactoryRegistry);
+        }
+
+        public CombatPetTriggerUsageRegistry PetUsageRegistry { get; }
+
+        public CombatPetTriggerUsageCommitter PetUsageCommitter { get; }
+
+        public CombatPetLimitedTriggerUsageRegistry
+            LimitedUsageRegistry
+        {
+            get;
+        }
+
+        public CombatPetLimitedTriggerUsageCommitter
+            LimitedUsageCommitter
+        {
+            get;
         }
 
         public CombatPetCardTriggerUsageRegistry
@@ -196,6 +267,133 @@ namespace GardenGambit.Simulation.Combat
                 state);
         }
 
+        public CombatTriggerSourceRegistry BuildSourceRegistry(
+            CombatState state,
+            CombatArmorGainResolver armorGainResolver)
+        {
+            if (state == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(state));
+            }
+
+            if (armorGainResolver == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(armorGainResolver));
+            }
+
+            var factoryRegistry = FactoryCatalog.CreateRegistry(
+                armorGainResolver);
+
+            var sourceBuilder = new CombatPetTriggerSourceBuilder(
+                factoryRegistry);
+
+            return sourceBuilder.BuildRegistry(state);
+        }
+
+        public CombatTriggerSourceRegistry BuildSourceRegistry(
+            CombatState state,
+            CombatArmorGainResolver armorGainResolver,
+            CombatAttackGainResolver attackGainResolver,
+            CombatCardLookup cardLookup)
+        {
+            if (state == null)
+            {
+                throw new ArgumentNullException(nameof(state));
+            }
+
+            var factoryRegistry = FactoryCatalog.CreateRegistry(
+                armorGainResolver, attackGainResolver, cardLookup, PetUsageCommitter);
+            return new CombatPetTriggerSourceBuilder(factoryRegistry).BuildRegistry(state);
+        }
+
+        public CombatTriggerSourceRegistry BuildSourceRegistry(
+            CombatState state,
+            CombatArmorGainResolver armorGainResolver,
+            CombatAttackGainResolver attackGainResolver,
+            CombatCardLookup cardLookup,
+            CombatRescueResolver rescueResolver)
+        {
+            if (state == null)
+            {
+                throw new ArgumentNullException(nameof(state));
+            }
+
+            var factoryRegistry = FactoryCatalog.CreateRegistry(
+                armorGainResolver,
+                attackGainResolver,
+                cardLookup,
+                PetUsageCommitter,
+                rescueResolver);
+
+            return new CombatPetTriggerSourceBuilder(
+                    factoryRegistry)
+                .BuildRegistry(state);
+        }
+
+        public CombatTriggerSourceRegistry BuildSourceRegistry(
+            CombatState state,
+            CombatArmorGainResolver armorGainResolver,
+            CombatAttackGainResolver attackGainResolver,
+            CombatCardLookup cardLookup,
+            CombatRescueResolver rescueResolver,
+            CombatHpGainResolver hpGainResolver,
+            CombatEventLog eventLog)
+        {
+            if (state == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(state));
+            }
+
+            if (eventLog == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(eventLog));
+            }
+
+            var factoryRegistry =
+                FactoryCatalog.CreateRegistry(
+                    armorGainResolver,
+                    attackGainResolver,
+                    cardLookup,
+                    PetUsageCommitter,
+                    rescueResolver,
+                    hpGainResolver,
+                    eventLog);
+
+            return new CombatPetTriggerSourceBuilder(
+                    factoryRegistry)
+                .BuildRegistry(state);
+        }
+
+        public CombatTriggerSourceRegistry BuildSourceRegistry(
+            CombatState state,
+            CombatArmorGainResolver armorGainResolver,
+            CombatAttackGainResolver attackGainResolver,
+            CombatCardLookup cardLookup,
+            CombatRescueResolver rescueResolver,
+            CombatHpGainResolver hpGainResolver)
+        {
+            if (state == null)
+            {
+                throw new ArgumentNullException(nameof(state));
+            }
+
+            var factoryRegistry = FactoryCatalog.CreateRegistry(
+                armorGainResolver,
+                attackGainResolver,
+                cardLookup,
+                PetUsageCommitter,
+                rescueResolver,
+                hpGainResolver);
+
+            return new CombatPetTriggerSourceBuilder(
+                    factoryRegistry)
+                .BuildRegistry(state);
+        }
+
         public CombatResolutionRunner
             CreateResolutionRunner(
                 CombatState state,
@@ -228,9 +426,18 @@ namespace GardenGambit.Simulation.Combat
                     nameof(eventQueue));
             }
 
-            var sourceRegistry =
-                BuildSourceRegistry(
-                    state);
+            var armorGainResolver = new CombatArmorGainResolver(
+                metadataFactory,
+                eventLog);
+
+            var sourceRegistry = BuildSourceRegistry(
+                state,
+                armorGainResolver,
+                new CombatAttackGainResolver(metadataFactory, eventLog),
+                new CombatCardLookup(eventLog),
+                new CombatRescueResolver(metadataFactory, eventLog),
+                new CombatHpGainResolver(metadataFactory, eventLog),
+                eventLog);
 
             return new CombatResolutionRunner(
                 state,

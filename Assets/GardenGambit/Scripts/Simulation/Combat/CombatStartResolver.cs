@@ -43,6 +43,21 @@ namespace GardenGambit.Simulation.Combat
         public CombatStartedCombatEvent Start(
             CombatState state)
         {
+            return Start(
+                state,
+                CombatPokerHand.Unspecified,
+                CombatPokerHand.Unspecified,
+                CombatPokerHand.Unspecified,
+                CombatPokerHand.Unspecified);
+        }
+
+        public CombatStartedCombatEvent Start(
+            CombatState state,
+            CombatPokerHand playerFrontPokerHand,
+            CombatPokerHand playerBackPokerHand,
+            CombatPokerHand enemyFrontPokerHand,
+            CombatPokerHand enemyBackPokerHand)
+        {
             if (state == null)
             {
                 throw new ArgumentNullException(
@@ -65,7 +80,11 @@ namespace GardenGambit.Simulation.Combat
 
             var battleStartSnapshot =
                 _snapshotResolver.Resolve(
-                    state);
+                    state,
+                    playerFrontPokerHand,
+                    playerBackPokerHand,
+                    enemyFrontPokerHand,
+                    enemyBackPokerHand);
 
             var metadata =
                 _metadataFactory.CreateRoot();

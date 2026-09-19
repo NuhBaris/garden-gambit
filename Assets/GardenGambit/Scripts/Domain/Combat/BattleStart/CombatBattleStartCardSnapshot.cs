@@ -36,6 +36,9 @@ namespace GardenGambit.Domain.Combat
             Rank =
                 card.Rank;
 
+            Suit =
+                card.Suit;
+
             Season =
                 card.Season;
 
@@ -80,6 +83,26 @@ namespace GardenGambit.Domain.Combat
         {
             get;
         }
+
+        public CombatCardSuit Suit
+        {
+            get;
+        }
+
+        public bool HasSpecifiedSuit =>
+            Suit != CombatCardSuit.Unspecified;
+
+        public bool IsFruit =>
+            Suit == CombatCardSuit.Fruit;
+
+        public bool IsVegetable =>
+            Suit == CombatCardSuit.Vegetable;
+
+        public bool IsNut =>
+            Suit == CombatCardSuit.Nut;
+
+        public bool IsDrink =>
+            Suit == CombatCardSuit.Drink;
 
         public CombatCardSeason Season
         {

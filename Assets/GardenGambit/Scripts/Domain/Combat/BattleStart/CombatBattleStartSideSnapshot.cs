@@ -92,14 +92,64 @@ namespace GardenGambit.Domain.Combat
 
             Side = side;
 
+            FrontPokerHand =
+                CombatPokerHand.Unspecified;
+
+            BackPokerHand =
+                CombatPokerHand.Unspecified;
+
             _readOnlyCards =
                 _cards.AsReadOnly();
+        }
+
+        public CombatBattleStartSideSnapshot(
+            CombatSide side,
+            IEnumerable<
+                CombatBattleStartCardSnapshot>
+                cards,
+            CombatPokerHand frontPokerHand,
+            CombatPokerHand backPokerHand)
+            : this(
+                side,
+                cards)
+        {
+            ValidatePokerHand(
+                frontPokerHand,
+                nameof(frontPokerHand));
+
+            ValidatePokerHand(
+                backPokerHand,
+                nameof(backPokerHand));
+
+            FrontPokerHand =
+                frontPokerHand;
+
+            BackPokerHand =
+                backPokerHand;
         }
 
         public CombatSide Side
         {
             get;
         }
+
+        public CombatPokerHand FrontPokerHand
+        {
+            get;
+        }
+
+        public CombatPokerHand BackPokerHand
+        {
+            get;
+        }
+
+        public bool HasSpecifiedFrontPokerHand =>
+            FrontPokerHand !=
+            CombatPokerHand.Unspecified;
+
+        public bool HasSpecifiedBackPokerHand =>
+            BackPokerHand !=
+            CombatPokerHand.Unspecified;
 
         public int Count =>
             _cards.Count;
@@ -217,6 +267,44 @@ namespace GardenGambit.Domain.Combat
             return count;
         }
 
+        public int CountDistinctSpecifiedSuitsInRow(
+            BoardRow row)
+        {
+            ValidateRow(
+                row);
+
+            var suits =
+                new HashSet<CombatCardSuit>();
+
+            for (var index = 0;
+                 index < _cards.Count;
+                 index++)
+            {
+                var card =
+                    _cards[index];
+
+                if (card.Row == row &&
+                    card.HasSpecifiedSuit)
+                {
+                    suits.Add(
+                        card.Suit);
+                }
+            }
+
+            return suits.Count;
+        }
+
+        public CombatPokerHand GetPokerHand(
+            BoardRow row)
+        {
+            ValidateRow(
+                row);
+
+            return row == BoardRow.Front
+                ? FrontPokerHand
+                : BackPokerHand;
+        }
+
         private static void ValidateRow(
             BoardRow row)
         {
@@ -228,6 +316,23 @@ namespace GardenGambit.Domain.Combat
                     row,
                     "Battle-start snapshot row requires " +
                     "Front or Back.");
+            }
+        }
+
+        private static void ValidatePokerHand(
+            CombatPokerHand pokerHand,
+            string parameterName)
+        {
+            if (pokerHand <
+                    CombatPokerHand.Unspecified ||
+                pokerHand >
+                    CombatPokerHand.FlushFive)
+            {
+                throw new ArgumentOutOfRangeException(
+                    parameterName,
+                    pokerHand,
+                    "Battle-start Poker hand must be " +
+                    "a defined CombatPokerHand value.");
             }
         }
     }

@@ -12,6 +12,39 @@ namespace GardenGambit.Simulation.Combat
             InstanceId petInstanceId,
             InstanceId targetCardInstanceId,
             int reductionAmount)
+            : this(
+                normalAttackEventId,
+                petInstanceId,
+                targetCardInstanceId,
+                reductionAmount,
+                maximumPetUsageCount: 0,
+                allowCardScopedUsage: true)
+        {
+        }
+
+        public CombatNormalAttackTargetDamageReductionRequest(
+            CombatEventId normalAttackEventId,
+            InstanceId petInstanceId,
+            InstanceId targetCardInstanceId,
+            int reductionAmount,
+            int maximumPetUsageCount)
+            : this(
+                normalAttackEventId,
+                petInstanceId,
+                targetCardInstanceId,
+                reductionAmount,
+                maximumPetUsageCount,
+                allowCardScopedUsage: false)
+        {
+        }
+
+        private CombatNormalAttackTargetDamageReductionRequest(
+            CombatEventId normalAttackEventId,
+            InstanceId petInstanceId,
+            InstanceId targetCardInstanceId,
+            int reductionAmount,
+            int maximumPetUsageCount,
+            bool allowCardScopedUsage)
         {
             if (!normalAttackEventId.IsValid)
             {
@@ -57,6 +90,18 @@ namespace GardenGambit.Simulation.Combat
                     "must be greater than zero.");
             }
 
+            if (maximumPetUsageCount < 0 ||
+                !allowCardScopedUsage &&
+                maximumPetUsageCount == 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(maximumPetUsageCount),
+                    maximumPetUsageCount,
+                    "Maximum Pet usage count must be " +
+                    "greater than zero for limited " +
+                    "usage requests.");
+            }
+
             NormalAttackEventId =
                 normalAttackEventId;
 
@@ -68,6 +113,9 @@ namespace GardenGambit.Simulation.Combat
 
             ReductionAmount =
                 reductionAmount;
+
+            MaximumPetUsageCount =
+                maximumPetUsageCount;
 
             UsageKey =
                 new CombatPetCardTriggerKey(
@@ -94,6 +142,17 @@ namespace GardenGambit.Simulation.Combat
         {
             get;
         }
+
+        public int MaximumPetUsageCount
+        {
+            get;
+        }
+
+        public bool UsesLimitedPetUsage =>
+            MaximumPetUsageCount > 0;
+
+        public bool UsesCardScopedUsage =>
+            !UsesLimitedPetUsage;
 
         public CombatPetCardTriggerKey UsageKey
         {

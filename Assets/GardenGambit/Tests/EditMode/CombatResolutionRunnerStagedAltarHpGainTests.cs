@@ -213,6 +213,24 @@ namespace GardenGambit.Tests.EditMode
                     environment.EventLog,
                     CombatEventKind.Death),
                 Is.EqualTo(1));
+
+
+            var observedHpGainEvent =
+                environment.Observer.ObservedHpGainEvent;
+
+            Assert.That(
+                observedHpGainEvent.SourceInstanceId,
+                Is.EqualTo(
+                    environment.DonorCard.InstanceId));
+
+            Assert.That(
+                observedHpGainEvent.IsFromAnotherSource,
+                Is.True);
+
+            Assert.That(
+                observedHpGainEvent.IsSelfSource,
+                Is.False);
+
         }
 
         [Test]
@@ -347,6 +365,41 @@ namespace GardenGambit.Tests.EditMode
             Assert.That(
                 environment.Runner.HasActiveCombat,
                 Is.False);
+
+            var hpGainIndex = FindEventIndex(
+                environment.EventLog,
+                CombatEventKind.HpGain);
+
+            Assert.That(
+                hpGainIndex,
+                Is.GreaterThanOrEqualTo(0));
+
+            var hpGainEvent =
+                environment.EventLog.Events[hpGainIndex]
+                    as HpGainCombatEvent;
+
+            Assert.That(
+                hpGainEvent,
+                Is.Not.Null);
+
+            Assert.That(
+                hpGainEvent.SourceInstanceId,
+                Is.EqualTo(
+                    environment.DonorCard.InstanceId));
+
+            Assert.That(
+                hpGainEvent.TargetInstanceId,
+                Is.EqualTo(
+                    environment.RecipientCard.InstanceId));
+
+            Assert.That(
+                hpGainEvent.IsFromAnotherSource,
+                Is.True);
+
+            Assert.That(
+                hpGainEvent.IsSelfSource,
+                Is.False);
+
         }
 
         private static int CountEvents(

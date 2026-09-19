@@ -92,6 +92,33 @@ namespace GardenGambit.Simulation.Combat
             return preview;
         }
 
+        public CombatAltarTransferApplicationPreview
+            ApplyDonorDeathThresholdAfterTransferTriggers(
+                CombatAltarActivationExecutionState executionState)
+        {
+            if (executionState == null)
+            {
+                throw new ArgumentNullException(nameof(executionState));
+            }
+
+            if (executionState.Stage !=
+                CombatAltarActivationExecutionStage.TransferTriggersResolved)
+            {
+                throw new InvalidOperationException(
+                    "Altar donor death requires resolved transfer triggers.");
+            }
+
+            var preview = executionState.TransferPreview;
+            // A Sacrificial Altar HP_GAIN can legitimately change the recipient's
+            // Attack through nested Pet effects before donor death begins.
+            ValidateStateAfterRecipientTransfer(
+                preview,
+                allowRecipientAttackChanges: preview.IsSacrificialAltar);
+
+            preview.Snapshot.DonorCard.SetCurrentHpToZero();
+            return preview;
+        }
+
         private static void
             ValidateStateBeforeRecipientTransfer(
                 CombatAltarTransferApplicationPreview
@@ -138,7 +165,8 @@ namespace GardenGambit.Simulation.Combat
         private static void
             ValidateStateAfterRecipientTransfer(
                 CombatAltarTransferApplicationPreview
-                    preview)
+                    preview,
+                bool allowRecipientAttackChanges = false)
         {
             var snapshot =
                 preview.Snapshot;
@@ -169,7 +197,8 @@ namespace GardenGambit.Simulation.Combat
                     "match the applied transfer.");
             }
 
-            if (recipientCard.Attack !=
+            if (!allowRecipientAttackChanges &&
+                recipientCard.Attack !=
                 preview.RecipientCurrentAttack)
             {
                 throw new InvalidOperationException(

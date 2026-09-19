@@ -111,6 +111,9 @@ namespace GardenGambit.Domain.Combat
             Rank =
                 rank;
 
+            Suit =
+                CombatCardSuit.Unspecified;
+
             Season =
                 season;
 
@@ -125,6 +128,41 @@ namespace GardenGambit.Domain.Combat
 
             Attack =
                 attack;
+        }
+
+        public CombatCardState(
+            DefinitionId definitionId,
+            InstanceId instanceId,
+            CardRank rank,
+            CombatCardSuit suit,
+            CombatCardSeason season,
+            int hpCapacity,
+            int currentHp,
+            int armor,
+            int attack)
+            : this(
+                definitionId,
+                instanceId,
+                rank,
+                season,
+                hpCapacity,
+                currentHp,
+                armor,
+                attack)
+        {
+            if (!IsValidSuit(
+                    suit))
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(suit),
+                    suit,
+                    "Combat card suit must be " +
+                    "Unspecified, Fruit, Vegetable, " +
+                    "Nut or Drink.");
+            }
+
+            Suit =
+                suit;
         }
 
         public DefinitionId DefinitionId
@@ -142,6 +180,26 @@ namespace GardenGambit.Domain.Combat
             get;
             private set;
         }
+
+        public CombatCardSuit Suit
+        {
+            get;
+        }
+
+        public bool HasSpecifiedSuit =>
+            Suit != CombatCardSuit.Unspecified;
+
+        public bool IsFruit =>
+            Suit == CombatCardSuit.Fruit;
+
+        public bool IsVegetable =>
+            Suit == CombatCardSuit.Vegetable;
+
+        public bool IsNut =>
+            Suit == CombatCardSuit.Nut;
+
+        public bool IsDrink =>
+            Suit == CombatCardSuit.Drink;
 
         public CombatCardSeason Season
         {
@@ -469,6 +527,14 @@ namespace GardenGambit.Domain.Combat
                     CombatCardSeason.Unspecified &&
                 season <=
                     CombatCardSeason.Seasonless;
+        }
+
+        private static bool IsValidSuit(
+            CombatCardSuit suit)
+        {
+            return
+                suit >= CombatCardSuit.Unspecified &&
+                suit <= CombatCardSuit.Drink;
         }
     }
 }
